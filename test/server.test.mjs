@@ -225,17 +225,69 @@ test("health stays a secretless liveness probe", async () => {
   // reason; no account key, provider or path leaks through health.
   expect(body.accounts).toEqual({
     ran: true,
+    // `kept` and `retired` are read now, not taken from the sweep's report.
     kept: 0,
-    pruned: 0,
-    // No directory carries an ownership ledger in this temp data directory.
     retired: 0,
+    // No directory carries an ownership ledger in this temp data directory.
+    live: true,
+    pruned: 0,
     skippedLive: 0,
     failed: 0,
-    // The temp MAGPIE_CONFIG_DIR has no plugin-auth.json, so the sweep refused
-    // to touch anything rather than treat every directory as an orphan.
+    // The temp MAGPIE_CONFIG_DIR has no plugin-auth.json, so a live count
+    // cannot tell signed-in from signed-out accounts…
+    // (the live counts above stay 0 because no account directory exists)
     skipped: "auth_missing",
+    sweptAt: expect.any(String),
   });
   expect(res.body).not.toContain(tmp);
+});
+
+// The point of reading the counts at request time: a sign-out between two
+// sweeps must show up immediately, instead of waiting for the next sweep (or a
+// restart) to move the number.
+test("health counts accounts now, not at the last sweep", async () => {
+  const { writeAccountMeta } = await import("../lib/account-identity.mjs");
+  const config = join(tmp, "magpie-config");
+  const authFile = join(config, "plugin-auth.json");
+  const key = "health-probe";
+  const dir = join(tmp, "data", "accounts", key, key);
+  await mkdir(dir, { recursive: true });
+  await mkdir(config, { recursive: true });
+  await writeAccountMeta(dir, {
+    version: 1,
+    provider: key,
+    key,
+    accountId: "Health Probe",
+    uid: "uid-health",
+    signedInAt: null,
+  });
+
+  // Signed in: the key is in the auth file.
+  await writeFile(authFile, JSON.stringify({ [key]: { type: "oauth", accountId: "Health Probe", uid: "uid-health" } }));
+  let body = JSON.parse((await raw("GET", "/api/health", auth())).body);
+  expect(body.accounts.live).toBe(true);
+  expect(body.accounts.kept).toBe(1);
+  expect(body.accounts.retired).toBe(0);
+
+  // Signed out: the key is gone from the auth file. No sweep runs here, so
+  // the flipped numbers can only come from reading the state at request time.
+  await writeFile(authFile, JSON.stringify({}));
+  body = JSON.parse((await raw("GET", "/api/health", auth())).body);
+  expect(body.accounts.live).toBe(true);
+  expect(body.accounts.kept).toBe(0);
+  expect(body.accounts.retired).toBe(1);
+
+  // Signed in again: the same directory moves back, still without a sweep.
+  await writeFile(authFile, JSON.stringify({ [key]: { type: "oauth", accountId: "Health Probe", uid: "uid-health" } }));
+  body = JSON.parse((await raw("GET", "/api/health", auth())).body);
+  expect(body.accounts.kept).toBe(1);
+  expect(body.accounts.retired).toBe(0);
+
+  // Leave the temp tree exactly as the earlier tests found it: the next test
+  // expects no plugin-auth.json at all (`skipped: "auth_missing"`) and no
+  // `accounts/` root left behind.
+  rmSync(join(tmp, "data", "accounts"), { recursive: true, force: true });
+  rmSync(authFile, { force: true });
 });
 
 test("POST /api/accounts/prune runs the orphan sweep and returns its report", async () => {
