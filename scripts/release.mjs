@@ -9,7 +9,9 @@
 // It changes only package.json's `version`, commits it as `x.y.z: <message>`
 // and creates the tag `vx.y.z`. It never writes a CHANGELOG, never pushes
 // unless --push is given, and never sweeps unrelated working-tree changes into
-// the release commit.
+// the release commit. Before touching package.json it fetches origin main and
+// refuses to release when the branch is missing commits from it: that would only
+// surface later as a rejected push, after the commit and tag already exist.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -119,6 +121,58 @@ if (gitText(["status", "--porcelain", "--", "package.json"])) {
   fail("package.json has uncommitted changes; commit or stash them before releasing");
 }
 
+// A release is only safe when the remote main is already in this branch's
+// history. Checking that here means a stale branch fails before package.json is
+// touched, instead of after the commit and tag exist and the push is rejected as
+// non-fast-forward -- which leaves a local release nobody wants and a tag that
+// blocks the retry. This never pulls or rebases: a conflict is impossible to
+// predict, so that decision stays with whoever runs the release.
+function remoteMainTip() {
+  // Best effort only. Offline, a missing origin or a remote without main must
+  // not stop a release that may be perfectly fine.
+  const fetched = gitText(["fetch", "--no-tags", "origin", "main"], { allowFail: true });
+  if (fetched !== null) {
+    // FETCH_HEAD is what this fetch actually returned, so it cannot be stale the
+    // way a cached origin/main ref can be after a failed fetch.
+    const tip = gitText(["rev-parse", "--verify", "--quiet", "FETCH_HEAD^{commit}"], {
+      allowFail: true,
+    });
+    if (tip) return { commit: tip, label: "origin main (fetched)" };
+  }
+  const cached = gitText(["rev-parse", "--verify", "--quiet", "origin/main^{commit}"], {
+    allowFail: true,
+  });
+  if (cached) return { commit: cached, label: "origin/main (cached)" };
+  return null;
+}
+
+const remote = remoteMainTip();
+if (!remote) {
+  console.warn(
+    "[release] warning: cannot resolve origin/main (no origin remote, or the fetch failed); " +
+      "skipping the remote preflight.",
+  );
+} else if (
+  gitText(["merge-base", "--is-ancestor", remote.commit, "HEAD"], { allowFail: true }) === null
+) {
+  console.error(
+    `[release] FAIL: ${remote.label} ${remote.commit.slice(0, 12)} has commits that are not in ${branch}.`,
+  );
+  console.error(
+    `[release] Nothing has been written yet: package.json version is still ${current},`,
+  );
+  console.error("[release] no release commit was created and no tag was created.");
+  console.error("[release] Pushing now would be rejected as non-fast-forward. Rebase onto the");
+  console.error("[release] remote first (this script never pulls or rebases for you):");
+  console.error("[release]   git pull --rebase origin main");
+  console.error("[release]   node scripts/release.mjs --patch   # or the same arguments again");
+  process.exit(1);
+} else {
+  console.log(
+    `[release] remote : ${remote.label} ${remote.commit.slice(0, 12)} is in HEAD's history.`,
+  );
+}
+
 let next;
 if (bump === "minor") {
   next = `${Number(currentParts[1])}.${Number(currentParts[2]) + 1}.0`;
@@ -183,7 +237,13 @@ if (push) {
     gitRun(["push", "origin", `HEAD:${branch}`]);
     gitRun(["push", "origin", `refs/tags/${tag}`]);
   } catch (error) {
-    fail(`${error.message}; the local commit and tag exist but the push did not finish`);
+    fail(
+      `${error.message}; the local commit and tag exist but the push did not finish. ` +
+        "Recover with:\n" +
+        "  git pull --rebase\n" +
+        `  git push origin ${branch}\n` +
+        `  git push origin ${tag}`,
+    );
   }
   console.log(`[release] pushed ${branch} and ${tag} to origin`);
 } else {
