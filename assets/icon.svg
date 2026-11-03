@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Clean Login">
+  <rect width="128" height="128" rx="28" fill="#0f766e"/>
+  <rect x="24" y="31" width="80" height="60" rx="11" fill="#fff" opacity=".96"/>
+  <path d="M24 47h80" stroke="#0f766e" stroke-width="5" opacity=".22"/>
+  <circle cx="36" cy="39" r="3" fill="#0f766e" opacity=".48"/>
+  <circle cx="47" cy="39" r="3" fill="#0f766e" opacity=".48"/>
+  <path d="M64 53l17 7v12c0 11-7.2 19.4-17 23-9.8-3.6-17-12-17-23V60l17-7z" fill="#0f766e"/>
+  <path d="M56 72.5l5.5 5.5 11-11" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M105 92l8 8m-8 0l8-8" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+</svg>

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="clean-login-token" content="__CLEAN_LOGIN_TOKEN__">
+  <title>Clean Login</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <img class="brand-icon" src="assets/icon.svg" alt="">
+      <div class="brand-copy">
+        <h1 id="page-title">Clean Login</h1>
+        <p id="page-subtitle">Proxy IPs and provider sign-ins.</p>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Clean Login">
+      <button class="tab is-active" id="tab-providers" type="button" role="tab"
+        aria-selected="true" aria-controls="panel-providers">
+        <span id="tab-providers-label">Providers</span>
+        <span class="tab-count" id="provider-count">0</span>
+      </button>
+      <button class="tab" id="tab-proxies" type="button" role="tab"
+        aria-selected="false" aria-controls="panel-proxies">
+        <span id="tab-proxies-label">Proxy IPs</span>
+        <span class="tab-count" id="proxy-count">0</span>
+      </button>
+    </nav>
+
+    <main>
+      <section class="panel" id="panel-providers" role="tabpanel" aria-labelledby="tab-providers">
+        <div class="section-head">
+          <div>
+            <h2 id="providers-title">Providers</h2>
+            <p id="providers-copy">Supported providers and their current sign-in readiness.</p>
+          </div>
+        </div>
+        <div class="provider-sources" id="provider-sources" hidden>
+          <span class="provider-sources-badge" id="provider-sources-badge"></span>
+          <span class="provider-sources-note" id="provider-sources-note"></span>
+        </div>
+        <div class="setup-card" id="environment-setup" hidden>
+          <div class="setup-head">
+            <h3 id="environment-title">Login browser setup</h3>
+            <span class="setup-badge" id="environment-badge">Not installed</span>
+          </div>
+          <p class="setup-copy" id="environment-copy">Clean Login needs a one-time isolated browser so sign-in pages never open in your everyday browser. Nothing is downloaded until you choose Prepare.</p>
+          <dl class="setup-facts">
+            <div>
+              <dt id="environment-size-label">Download</dt>
+              <dd id="environment-size-value"></dd>
+            </div>
+            <div>
+              <dt id="environment-disk-label">Free disk space</dt>
+              <dd id="environment-disk-value"></dd>
+            </div>
+            <div class="setup-fact-wide">
+              <dt id="environment-location-label">Install location</dt>
+              <dd id="environment-location-value"></dd>
+            </div>
+          </dl>
+          <p class="setup-note" id="environment-note"></p>
+          <div class="setup-progress" id="environment-progress" hidden>
+            <div class="progress-track"><div class="progress-bar" id="environment-progress-bar"></div></div>
+            <span class="progress-text" id="environment-progress-text"></span>
+          </div>
+          <p class="form-error" id="environment-error" role="alert" hidden></p>
+          <div class="setup-actions">
+            <button class="button primary" id="environment-prepare" type="button">Prepare browser</button>
+            <button class="button" id="environment-cancel" type="button" hidden>Cancel</button>
+            <button class="button primary" id="environment-retry" type="button" hidden>Retry</button>
+          </div>
+        </div>
+        <div class="identities-card" id="account-identities" hidden>
+          <div class="setup-head">
+            <h3 id="identities-title">Account identities</h3>
+            <span class="setup-badge" id="identities-badge">0</span>
+          </div>
+          <p class="setup-copy" id="identities-copy">Each account keeps its own browser fingerprint. A signed-out identity is kept, so signing in again reuses the same fingerprint instead of drawing a new one.</p>
+          <div class="identity-list" id="account-identities-list"></div>
+          <p class="form-error" id="identities-error" role="alert" hidden></p>
+          <p class="setup-note" id="identities-notice" role="status" hidden></p>
+          <div class="setup-actions">
+            <button class="button" id="identities-retry" type="button">Retry</button>
+          </div>
+        </div>
+        <div class="empty" id="providers-empty">
+          <img src="assets/icon.svg" alt="">
+          <strong id="providers-empty-title">No providers yet</strong>
+          <p id="providers-empty-copy">Supported providers appear here when the local service is ready.</p>
+        </div>
+        <div class="provider-grid" id="providers-list" hidden></div>
+      </section>
+
+      <section class="panel" id="panel-proxies" role="tabpanel" aria-labelledby="tab-proxies" hidden>
+        <div class="section-head">
+          <div>
+            <h2 id="proxies-title">Proxy IPs</h2>
+            <p id="proxies-copy">Each account signs in and makes requests through the proxy you choose.</p>
+          </div>
+          <div class="section-actions">
+            <button class="button primary" id="add-proxy" type="button">
+              <span aria-hidden="true">+</span>
+              <span id="add-proxy-label">Add Proxy</span>
+            </button>
+          </div>
+        </div>
+        <div class="empty" id="proxies-empty">
+          <img src="assets/icon.svg" alt="">
+          <strong id="proxies-empty-title">No proxy IPs yet</strong>
+          <p id="proxies-empty-copy">Add a proxy to give providers a clean exit.</p>
+          <button class="button primary" id="add-proxy-empty" type="button">Add Proxy</button>
+        </div>
+        <div class="proxy-filters" id="proxy-filters" hidden>
+          <div class="filter-group" role="group" aria-labelledby="filter-region-label">
+            <span class="filter-label" id="filter-region-label">Region</span>
+            <div class="filter-chips" id="filter-regions"></div>
+          </div>
+          <div class="filter-group filter-latency">
+            <span class="filter-label" id="filter-latency-label">Latency (ms)</span>
+            <div class="filter-range">
+              <input class="filter-input" id="filter-latency-min" type="number" min="0" step="1"
+                inputmode="numeric" placeholder="Min" aria-label="Minimum latency">
+              <span class="filter-range-sep" aria-hidden="true">–</span>
+              <input class="filter-input" id="filter-latency-max" type="number" min="0" step="1"
+                inputmode="numeric" placeholder="Max" aria-label="Maximum latency">
+            </div>
+          </div>
+          <div class="filter-actions">
+            <span class="filter-count" id="filter-count"></span>
+            <button class="button quiet" id="filter-reset" type="button">Reset</button>
+          </div>
+        </div>
+        <div class="proxy-score-bar" id="proxy-score-bar" hidden>
+          <span class="proxy-score-state" id="proxy-score-state"></span>
+          <button class="button quiet" id="score-cancel" type="button" hidden>Close window</button>
+        </div>
+        <div class="proxy-table" id="proxy-table" hidden>
+          <div class="proxy-table-head" aria-hidden="true">
+            <span id="col-name">Name</span>
+            <span id="col-address">Address</span>
+            <span id="col-region">Region</span>
+            <span id="col-score">Score</span>
+            <span id="col-status">Status</span>
+            <span id="col-checked">Last checked</span>
+            <span></span>
+          </div>
+          <div id="proxies-list"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="service-state" id="service-state" data-state="connecting">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="service-label">Connecting…</span>
+      </span>
+      <span class="footer-meta">
+        <span id="version"></span>
+        <button class="link" id="retry" type="button" hidden>Retry</button>
+      </span>
+    </footer>
+  </div>
+
+  <dialog id="proxy-dialog" class="dialog">
+    <form id="proxy-form" novalidate>
+      <div class="dialog-head">
+        <div>
+          <h3 id="proxy-dialog-title">Add Proxy IP</h3>
+          <p id="proxy-dialog-copy">HTTP, HTTPS and SOCKS5 are supported.</p>
+        </div>
+        <button class="dialog-close" id="proxy-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="proxy-name" id="label-name">Name</label>
+            <input id="proxy-name" name="name" type="text" autocomplete="off" maxlength="80"
+              placeholder="Singapore · 01" required>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="proxy-type" id="label-type">Type</label>
+              <select id="proxy-type" name="type">
+                <option value="http">HTTP</option>
+                <option value="https">HTTPS</option>
+                <option value="socks5">SOCKS5</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="proxy-port" id="label-port">Port</label>
+              <input id="proxy-port" name="port" type="text" inputmode="numeric"
+                autocomplete="off" maxlength="5" placeholder="1080" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="proxy-host" id="label-host">Host</label>
+            <input id="proxy-host" name="host" type="text" autocomplete="off" maxlength="255"
+              placeholder="127.0.0.1" required>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="proxy-username" id="label-username"><span id="username-label">Username</span> <span class="optional" id="username-optional">(optional)</span></label>
+              <input id="proxy-username" name="username" type="text" autocomplete="off" maxlength="255">
+            </div>
+            <div class="field">
+              <label for="proxy-password" id="label-password"><span id="password-label">Password</span> <span class="optional" id="password-optional">(optional)</span></label>
+              <input id="proxy-password" name="password" type="password"
+                autocomplete="new-password" spellcheck="false" maxlength="255">
+              <p class="field-hint" id="proxy-password-hint" hidden></p>
+            </div>
+          </div>
+        </div>
+        <p class="form-error" id="proxy-form-error" role="alert" hidden></p>
+        <div class="proxy-test-result" id="proxy-test-result" role="status" hidden></div>
+      </div>
+      <div class="dialog-footer">
+        <button class="button quiet" id="test-proxy" type="button">Test connection</button>
+        <button class="button" id="proxy-cancel" type="button">Cancel</button>
+        <!-- Save MUST be type="button" with an explicit click handler. magpie
+             mounts page plugins in <iframe sandbox="allow-scripts">, which has
+             no allow-forms token: the browser blocks form submission before the
+             submit event fires, so a submit-type (or implicit submission)
+             button is silently dead in magpie. Never change this to a
+             submit-type button. -->
+        <button class="button primary" id="save-proxy" type="button">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="signin-dialog" class="dialog signin-dialog">
+    <div class="dialog-head">
+      <div>
+        <h3 id="signin-title">Add account</h3>
+        <p id="signin-copy">This opens an isolated browser window.</p>
+      </div>
+      <button class="dialog-close" id="signin-close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="dialog-body">
+      <p class="signin-provider" id="signin-provider"></p>
+      <p class="signin-unverified" id="signin-unverified"></p>
+      <div class="field" id="signin-method-field" hidden>
+        <label for="signin-method" id="signin-method-label">Sign-in method</label>
+        <select id="signin-method" name="method"></select>
+        <p class="field-hint" id="signin-method-hint" hidden></p>
+      </div>
+      <div class="field" id="signin-account-field" hidden>
+        <label for="signin-account" id="signin-account-label">Continue with an existing identity</label>
+        <select id="signin-account" name="account"></select>
+        <p class="field-hint" id="signin-account-hint" hidden></p>
+      </div>
+      <div class="field" id="signin-proxy-field">
+        <label for="signin-proxy" id="signin-proxy-label">Proxy IP</label>
+        <select id="signin-proxy" name="proxy"></select>
+      </div>
+      <p class="signin-notice" id="signin-notice" hidden></p>
+      <p class="form-error" id="signin-error" role="alert" hidden></p>
+      <div class="signin-status" id="signin-status" hidden>
+        <span class="signin-status-state" id="signin-status-state"></span>
+        <span class="signin-status-detail" id="signin-status-detail"></span>
+      </div>
+      <div class="signin-result" id="signin-result" hidden>
+        <span class="signin-result-label" id="signin-result-label"></span>
+        <code class="signin-result-key" id="signin-result-key"></code>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="button quiet" id="signin-cancel" type="button" hidden>Cancel sign-in</button>
+      <button class="button" id="signin-close-footer" type="button">Close</button>
+      <button class="button primary" id="signin-start" type="button">Start sign-in</button>
+    </div>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="dialog confirm-dialog">
+    <div class="dialog-head">
+      <div>
+        <h3 id="confirm-title">Delete proxy IP?</h3>
+        <p id="confirm-copy"></p>
+      </div>
+      <button class="dialog-close" id="confirm-close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="dialog-body">
+      <p class="form-error" id="confirm-error" role="alert" hidden></p>
+    </div>
+    <div class="dialog-footer">
+      <button class="button" id="confirm-cancel" type="button">Cancel</button>
+      <button class="button danger" id="confirm-action" type="button">Delete</button>
+    </div>
+  </dialog>
+</body>
+</html>
