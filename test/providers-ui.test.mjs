@@ -4,9 +4,12 @@ import { join } from "node:path";
 import { PROVIDERS, publicProvider } from "../lib/provider-registry.mjs";
 import { mergeProviderSources } from "../lib/provider-sources.mjs";
 import {
+  PLUGIN_SCAN_POLL_INTERVAL_MS,
+  PLUGIN_SCAN_POLL_MAX_ATTEMPTS,
   localizedText,
   providerCanSignIn,
   providerStatusView,
+  shouldPollPluginScan,
 } from "../ui/provider-state.js";
 
 const root = join(import.meta.dir, "..");
@@ -76,6 +79,34 @@ test("a runnable method of any kind is offered, and a non-runnable one is not", 
     browserMethod: false,
     signInProvider: null,
   })).toBe(false);
+});
+
+// Root cause 2 regression: the first /api/provider-sources read is answered
+// while the installed-plugin scan child is still running, so its cards carry
+// no sign-in methods. The page has to keep asking until the scan settles;
+// otherwise every card stays on "waiting for verification" with no entry until
+// the user reloads by hand.
+test("a still-running plugin scan is polled, a settled or failed one is not", () => {
+  expect(shouldPollPluginScan({ scanning: true, available: false, scanned: false })).toBe(true);
+  // A stale cache is being refreshed in the background: its new entries are
+  // worth waiting for too.
+  expect(shouldPollPluginScan({ scanning: true, available: true, scanned: true, stale: true })).toBe(true);
+  for (const settled of [
+    { scanning: false, available: true, scanned: true },
+    { scanning: false, available: false, error: "dirent is not defined" },
+    { available: false, scanned: false },
+    {},
+    null,
+    undefined,
+  ]) {
+    expect(shouldPollPluginScan(settled)).toBe(false);
+  }
+  // The poll is bounded, so a scan that never settles cannot leave an endless
+  // loop (or an endless run of requests) behind.
+  expect(PLUGIN_SCAN_POLL_MAX_ATTEMPTS).toBeGreaterThanOrEqual(20);
+  expect(PLUGIN_SCAN_POLL_MAX_ATTEMPTS).toBeLessThanOrEqual(30);
+  expect(PLUGIN_SCAN_POLL_INTERVAL_MS).toBeGreaterThanOrEqual(1000);
+  expect(PLUGIN_SCAN_POLL_INTERVAL_MS).toBeLessThanOrEqual(2000);
 });
 
 test("the provider card wires a type=button add entry, never a submit control", () => {

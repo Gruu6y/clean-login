@@ -13,11 +13,14 @@ import {
 import { distinctRegions, filterProxies } from "./proxy-filter.js";
 import { isScoreActive, isScoreSettled, scoreView } from "./proxy-score.js";
 import {
+  PLUGIN_SCAN_POLL_INTERVAL_MS,
+  PLUGIN_SCAN_POLL_MAX_ATTEMPTS,
   localizedText,
   methodCategory,
   methodCategoryText,
   providerCanSignIn,
   providerStatusView,
+  shouldPollPluginScan,
 } from "./provider-state.js";
 import { signInActive, signInPayload } from "./signin-state.js";
 import {
@@ -76,6 +79,8 @@ const messages = {
     providerPluginsFound: "{count} installed provider entries · {browser} need a browser",
     providerPluginsScanning: "Scanning installed plugins…",
     providerPluginsUnavailable: "Installed plugin scan unavailable",
+    providerPluginsFailed: "Installed plugin scan failed: {error}",
+    providerPluginsScanTimedOut: "The installed-plugin scan is still running. Reload the page to see its result.",
     addAccount: "Add account",
     signInTitle: "Add account",
     signInCopy: "This opens an isolated browser window. Complete the sign-in there; Clean Login writes the resulting credential into magpie.",
@@ -291,6 +296,8 @@ const messages = {
     providerPluginsFound: "已安装供应商条目 {count} 个 · {browser} 个需要浏览器",
     providerPluginsScanning: "正在扫描已安装插件…",
     providerPluginsUnavailable: "无法扫描已安装插件",
+    providerPluginsFailed: "已安装插件扫描失败：{error}",
+    providerPluginsScanTimedOut: "已安装插件扫描仍在进行。刷新页面以查看结果。",
     addAccount: "添加账号",
     signInTitle: "添加账号",
     signInCopy: "这会打开一个隔离浏览器窗口。请在窗口里完成登录，干净登录会把生成的凭据写入 magpie。",
@@ -506,6 +513,8 @@ const messages = {
     providerPluginsFound: "已安裝供應商項目 {count} 個 · {browser} 個需要瀏覽器",
     providerPluginsScanning: "正在掃描已安裝外掛…",
     providerPluginsUnavailable: "無法掃描已安裝外掛",
+    providerPluginsFailed: "已安裝外掛掃描失敗：{error}",
+    providerPluginsScanTimedOut: "已安裝外掛掃描仍在進行。重新整理頁面以查看結果。",
     addAccount: "新增帳號",
     signInTitle: "新增帳號",
     signInCopy: "這會開啟一個隔離瀏覽器視窗。請在視窗裡完成登入，乾淨登入會把產生的憑證寫入 magpie。",
@@ -721,6 +730,8 @@ const messages = {
     providerPluginsFound: "インストール済みプロバイダー {count} 件 · ブラウザーが必要 {browser} 件",
     providerPluginsScanning: "インストール済みプラグインをスキャン中…",
     providerPluginsUnavailable: "インストール済みプラグインをスキャンできません",
+    providerPluginsFailed: "インストール済みプラグインのスキャンに失敗しました：{error}",
+    providerPluginsScanTimedOut: "インストール済みプラグインのスキャンはまだ実行中です。ページを再読み込みすると結果が表示されます。",
     addAccount: "アカウントを追加",
     signInTitle: "アカウントを追加",
     signInCopy: "隔離されたブラウザーウィンドウを開きます。そこでログインすると、クリーンログインが得られた認証情報を magpie に書き込みます。",
@@ -2270,8 +2281,110 @@ function pluginScanNote(plugins) {
       .replace("{count}", String(plugins.count ?? 0))
       .replace("{browser}", String(plugins.browserMethods ?? 0));
   }
+  if (plugins?.pollGaveUp) return text.providerPluginsScanTimedOut;
   if (plugins?.scanning || plugins?.stale) return text.providerPluginsScanning;
+  // A scan that reported an error is a FAILED scan, not an absent feature:
+  // name the failure and quote the service's own diagnostic. "unavailable" is
+  // kept for a scan that never produced an error at all.
+  if (plugins?.error) {
+    return text.providerPluginsFailed.replace("{error}", String(plugins.error).slice(0, 200));
+  }
   return text.providerPluginsUnavailable;
+}
+
+// The add entries on the cards come from the installed-plugin scan, and the
+// service starts that scan on the first /api/provider-sources read. The first
+// answer is produced while the scan child is still running (`scanning: true`),
+// so its cards carry no sign-in methods; without a follow-up read the page
+// would keep saying "Scanning installed plugins…" with no entry until the user
+// reloaded by hand.
+//
+// So the page follows the scan on a bounded schedule. The loop is independent
+// of the sign-in and score timers, never stacks a request on an in-flight one,
+// pauses while the page is hidden, and gives up with an honest note instead of
+// claiming a live scan forever.
+let pluginScanPoll = null;
+let providerSourcesView = null;
+
+function stopPluginScanPolling() {
+  const poll = pluginScanPoll;
+  pluginScanPoll = null;
+  if (!poll) return;
+  poll.guard.cancel();
+  if (poll.timer) clearTimeout(poll.timer);
+}
+
+function applyProviderSources(view) {
+  providerSourcesView = view;
+  const providers = view && Array.isArray(view.providers) ? view.providers : [];
+  renderProviders(providers);
+  renderProviderSources(view);
+}
+
+// The scan did not settle inside the poll budget. Stop and say so: leaving the
+// "scanning" note up would claim a scan that may no longer be running.
+function abandonPluginScanPolling() {
+  stopPluginScanPolling();
+  if (!providerSourcesView) return;
+  applyProviderSources({
+    ...providerSourcesView,
+    plugins: { ...(providerSourcesView.plugins || {}), scanning: false, pollGaveUp: true },
+  });
+}
+
+function schedulePluginScanPoll() {
+  if (!pluginScanPoll || pluginScanPoll.inflight) return;
+  pluginScanPoll.timer = setTimeout(runPluginScanPoll, PLUGIN_SCAN_POLL_INTERVAL_MS);
+}
+
+async function runPluginScanPoll() {
+  const poll = pluginScanPoll;
+  if (!poll || poll.inflight) return;
+  poll.timer = null;
+  // A hidden page must not keep the service busy. The visibilitychange handler
+  // continues the same bounded budget once the page is visible again.
+  if (document.hidden) return;
+  if (poll.attempts >= PLUGIN_SCAN_POLL_MAX_ATTEMPTS) {
+    abandonPluginScanPolling();
+    return;
+  }
+  poll.attempts += 1;
+  poll.inflight = true;
+  const token = poll.guard.begin();
+  let merged = null;
+  try {
+    merged = await api("api/provider-sources", {
+      method: "POST",
+      body: { magpie: magpiePayloadFromHash() },
+    });
+  } catch {
+    merged = null;
+  }
+  // A newer load() (or a stopped loop) owns the state now; a late answer from
+  // this request must not touch it.
+  if (pluginScanPoll !== poll || !poll.guard.isCurrent(token)) return;
+  poll.inflight = false;
+  if (!merged || !merged.providerSources) {
+    // One failed read must not freeze the cards on "scanning": retry until the
+    // budget runs out.
+    schedulePluginScanPoll();
+    return;
+  }
+  const view = {
+    ...merged.providerSources,
+    plugins: { ...(merged.providerSources.plugins || {}), ...(merged.pluginScan || {}) },
+  };
+  applyProviderSources(view);
+  if (shouldPollPluginScan(view.plugins)) schedulePluginScanPoll();
+  else stopPluginScanPolling();
+}
+
+function startPluginScanPolling() {
+  stopPluginScanPolling();
+  if (!shouldPollPluginScan(providerSourcesView?.plugins)) return;
+  const guard = createRequestGuard();
+  pluginScanPoll = { guard, attempts: 0, inflight: false, timer: null };
+  schedulePluginScanPoll();
 }
 
 function renderProviderSources(view) {
@@ -2317,6 +2430,7 @@ function renderProviders(items) {
 
 function render(data) {
   const view = data?.providerSources;
+  providerSourcesView = view || null;
   const providers = view && Array.isArray(view.providers)
     ? view.providers
     : Array.isArray(data?.providers) ? data.providers : [];
@@ -2508,6 +2622,9 @@ async function loadEnvironment() {
 async function load() {
   setServiceState("connecting", text.connecting);
   byId("retry").hidden = true;
+  // A retry restarts the plugin-scan follow-up from scratch instead of leaving
+  // the previous loop running beside it.
+  stopPluginScanPolling();
   try {
     // Relative so it also works when magpie web mounts the service under a
     // path of its own address (magpie.service) for remote viewers.
@@ -2531,6 +2648,10 @@ async function load() {
       providerSources = null;
     }
     render({ ...data, providerSources });
+    // The first provider-sources read starts the installed-plugin scan and
+    // answers while it is still running; follow it so the cards gain their add
+    // entries without a manual page reload.
+    startPluginScanPolling();
     // The token is valid again, so clear the reload marker left by the one
     // automatic reload; the launcher's theme/lang and the hash stay intact.
     reloadGuard.clearMarker();
@@ -2954,6 +3075,13 @@ window.addEventListener("pagehide", () => {
   stopEnvironmentPolling();
   stopSignInPolling();
   stopScorePolling();
+  stopPluginScanPolling();
+});
+// The plugin-scan follow-up pauses while the page is hidden; resume it (same
+// bounded budget) when the page comes back.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (pluginScanPoll && !pluginScanPoll.timer && !pluginScanPoll.inflight) schedulePluginScanPoll();
 });
 byId("filter-reset").addEventListener("click", resetProxyFilters);
 byId("filter-latency-min").addEventListener("input", () => {

@@ -256,6 +256,67 @@ test("scanMagpiePlugins finds providers in every scope under node_modules", asyn
   }
 });
 
+// Regression: the per-package loop used to read `dirent`, which only exists in
+// the scope loop's inner block, so a package.json WITHOUT a `name` threw a
+// ReferenceError inside the child. That took the whole scan down: the parent
+// saw `available:false, providers:[]`, every provider card lost its sign-in
+// entry and the page showed nothing but "waiting for verification". One broken
+// package may contribute zero providers; it may never fail the scan.
+test("a package without a name degrades to itself, never to a failed scan", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "clean-login-nameless-"));
+  try {
+    const root = join(dir, "plugins", "node_modules");
+    const good = join(root, "@scope", "good-auth");
+    mkdirSync(good, { recursive: true });
+    writeFileSync(
+      join(good, "package.json"),
+      JSON.stringify({ name: "@scope/good-auth", type: "module", main: "./index.mjs" }),
+    );
+    writeFileSync(
+      join(good, "index.mjs"),
+      `export const F = async () => ({ auth: { provider: "good", methods: [{ type: "oauth", label: "Good (browser)", authorize: async () => {} }] } });\n`,
+    );
+
+    // A bundled build really ships a package.json without a name (for example
+    // yaml/browser on the machine this bug was found on). Only the directory
+    // name identifies it.
+    const nameless = join(root, "badpkg", "browser");
+    mkdirSync(nameless, { recursive: true });
+    writeFileSync(join(nameless, "package.json"), JSON.stringify({ type: "module", main: "./index.mjs" }));
+    writeFileSync(
+      join(nameless, "index.mjs"),
+      `export const F = async () => ({ auth: { provider: "nameless", methods: [] } });\n`,
+    );
+
+    // A factory that throws must cost its own package only, never the scan.
+    const exploding = join(root, "@scope", "exploding");
+    mkdirSync(exploding, { recursive: true });
+    writeFileSync(
+      join(exploding, "package.json"),
+      JSON.stringify({ name: "@scope/exploding", type: "module", main: "./index.mjs" }),
+    );
+    writeFileSync(
+      join(exploding, "index.mjs"),
+      `export const F = async () => { throw new Error("factory exploded"); };\n`,
+    );
+
+    const scan = await scanMagpiePlugins({ env: { MAGPIE_CONFIG_DIR: dir }, timeoutMs: 15000 });
+    expect(scan.available).toBe(true);
+    // A successful scan carries no error at all, so nothing can be shown as a
+    // failed scan.
+    expect(scan.error).toBeUndefined();
+    expect(scan.providers.map((provider) => provider.id).sort()).toEqual(["good", "nameless"]);
+    // The nameless package falls back to its directory name, not to a crash.
+    expect(scan.providers.find((provider) => provider.id === "nameless").package).toBe("browser");
+    // The good provider keeps its browser method, which is what makes a card
+    // signable again.
+    const goodScan = scan.providers.find((provider) => provider.id === "good");
+    expect(goodScan.methods[0]).toMatchObject({ type: "oauth", category: "browser", runnable: true });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("scanMagpiePlugins ignores noise and parses the marked JSON line", async () => {
   const output = JSON.stringify({ available: true, providers: [{ id: "x", methods: [] }] });
   const exec = fakeExecFile((_f, _a, _o, callback) => callback(null, `warn: something\n${output}\n`));
