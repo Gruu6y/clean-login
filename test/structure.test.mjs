@@ -9,13 +9,17 @@ test("uses the community page package shape", () => {
   expect(pkg.name).toBe("@gruu6y/page-clean-login");
   expect(pkg.license).toBe("MIT");
   expect(pkg.type).toBe("module");
-  // A page plugin names no entry file: magpie reads `magpie.page.file` as its
-  // kind only when `main` and `exports` are both absent, and loads `index.mjs`
-  // by convention (its INDEX_FILES). Naming `main` here would leave the GitHub
-  // topic card with no kind, so it would not appear under the Pages filter.
-  expect(pkg.main).toBeUndefined();
-  expect(pkg.exports).toBeUndefined();
-  expect(existsSync(join(root, "index.mjs"))).toBe(true);
+  // A page plugin that runs a host service MUST name an entry file.
+  // magpie assigns `magpie.page.service` only while `main` (or `exports`) is
+  // present — internal/plugin/page.go: "a plugin that is only a page has none,
+  // so its sandboxed page can't be handed a way to some other program's port".
+  // Without it the page renders but nothing listens, so the frame shows
+  // "127.0.0.1 refused to connect".
+  //
+  // The cost of naming it: github.go only reads a plugin's kind as "page" when
+  // main and exports are BOTH absent, so Discover files this one under
+  // providers rather than pages. A working service wins over the right shelf.
+  expect(pkg.main).toBe("./index.mjs");
   expect(pkg.magpie.icon).toMatch(/^https:\/\//);
   expect(pkg.magpie.page.file).toBe("page/index.html");
   expect(pkg.magpie.page.service).toEqual({ port: 3492, option: "port" });
@@ -28,7 +32,7 @@ test("declares only the providers:list read it actually uses", () => {
 
 test("ships every file the manifest names", () => {
   for (const file of [
-    "index.mjs",
+    pkg.main,
     pkg.magpie.page.file,
     pkg.magpie.page.icon,
     "ui/index.html",
