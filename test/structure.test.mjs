@@ -9,7 +9,14 @@ test("uses the community page package shape", () => {
   expect(pkg.name).toBe("@gruu6y/page-clean-login");
   expect(pkg.license).toBe("MIT");
   expect(pkg.type).toBe("module");
-  expect(pkg.main).toBe("./index.mjs");
+  // A page plugin names no entry file: magpie reads `magpie.page.file` as its
+  // kind only when `main` and `exports` are both absent, and loads `index.mjs`
+  // by convention (its INDEX_FILES). Naming `main` here would leave the GitHub
+  // topic card with no kind, so it would not appear under the Pages filter.
+  expect(pkg.main).toBeUndefined();
+  expect(pkg.exports).toBeUndefined();
+  expect(existsSync(join(root, "index.mjs"))).toBe(true);
+  expect(pkg.magpie.icon).toMatch(/^https:\/\//);
   expect(pkg.magpie.page.file).toBe("page/index.html");
   expect(pkg.magpie.page.service).toEqual({ port: 3492, option: "port" });
   expect(pkg.magpie.options.port).toBe(3492);
@@ -21,7 +28,7 @@ test("declares only the providers:list read it actually uses", () => {
 
 test("ships every file the manifest names", () => {
   for (const file of [
-    pkg.main,
+    "index.mjs",
     pkg.magpie.page.file,
     pkg.magpie.page.icon,
     "ui/index.html",

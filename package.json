@@ -4,7 +4,6 @@
   "description": "Manage proxy IPs and provider sign-ins in magpie, with each account signed in through an isolated browser. A page plugin with a loopback-only host service.",
   "license": "MIT",
   "type": "module",
-  "main": "./index.mjs",
   "files": [
     "index.mjs",
     "lib",
@@ -39,6 +38,7 @@
     "playwright-core": "1.62.0"
   },
   "magpie": {
+    "icon": "https://raw.githubusercontent.com/Gruu6y/clean-login/main/assets/icon.svg",
     "page": {
       "title": "Clean Login",
       "titles": {
