@@ -85,24 +85,108 @@ test("latencyBound ignores empty and nonsense input", () => {
   expect(latencyBound(45.5)).toBe(45.5);
 });
 
-test("the filter bar is wired to the pure helpers and every chip is a button", () => {
-  expect(app).toContain("filterProxies(proxies, proxyFilter)");
-  expect(app).toContain("distinctRegions(proxies)");
-  expect(app).toContain("function renderFilterChips()");
-  expect(app).toContain("function resetProxyFilters()");
-  expect(app).toContain('all.type = "button"');
-  expect(app).toContain('chip.type = "button"');
-  expect(html).toContain('id="proxy-filters"');
-  expect(html).toContain('id="filter-regions"');
-  expect(html).toContain('id="filter-latency-min"');
-  expect(html).toContain('id="filter-latency-max"');
-  expect(html).toContain('id="filter-reset"');
-  expect(html).toContain('id="filter-count"');
-  expect(html).toContain('id="filter-reset" type="button"');
+// The filter bar is asserted against the real markup, not against indentation.
+// `htmlDivById` returns the outer HTML of the first <div> carrying the id, with
+// nested divs balanced. `jsFunctionBody` returns a top-level function's body
+// (string literals and comments skipped) so the chip wiring is asserted where
+// it actually lives.
+function htmlDivById(source, id) {
+  const open = new RegExp(`<div\\b[^>]*\\bid="${id}"[^>]*>`, "i").exec(source);
+  if (!open) return "";
+  const tags = /<div\b[^>]*>|<\/div\s*>/gi;
+  tags.lastIndex = open.index;
+  let depth = 0;
+  let match;
+  while ((match = tags.exec(source)) !== null) {
+    depth += match[0].startsWith("</") ? -1 : 1;
+    if (depth === 0) return source.slice(open.index, tags.lastIndex);
+  }
+  return "";
+}
 
-  const filterBar = /<div class="proxy-filters"[\s\S]*?<\/div>\n        <div class="proxy-score-bar"/.exec(html)?.[0] || "";
-  expect(filterBar).toContain("filter-latency-min");
+function jsFunctionBody(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  if (start === -1) return "";
+  const braceStart = source.indexOf("{", start);
+  if (braceStart === -1) return "";
+  let depth = 0;
+  for (let i = braceStart; i < source.length; i += 1) {
+    const character = source[i];
+    if (character === '"' || character === "'" || character === "`") {
+      const quote = character;
+      i += 1;
+      while (i < source.length) {
+        if (source[i] === "\\") {
+          i += 2;
+          continue;
+        }
+        if (source[i] === quote) break;
+        i += 1;
+      }
+      continue;
+    }
+    if (character === "/" && source[i + 1] === "/") {
+      const newline = source.indexOf("\n", i + 2);
+      i = newline === -1 ? source.length : newline;
+      continue;
+    }
+    if (character === "/" && source[i + 1] === "*") {
+      const close = source.indexOf("*/", i + 2);
+      i = close === -1 ? source.length : close + 1;
+      continue;
+    }
+    if (character === "{") depth += 1;
+    if (character === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(braceStart + 1, i);
+    }
+  }
+  return "";
+}
+
+test("the filter bar is wired to the pure helpers and every chip is a button", () => {
+  const renderList = jsFunctionBody(app, "renderProxies");
+  const renderChips = jsFunctionBody(app, "renderFilterChips");
+  const reset = jsFunctionBody(app, "resetProxyFilters");
+  expect(renderList).not.toBe("");
+  expect(renderChips).not.toBe("");
+  expect(reset).not.toBe("");
+
+  // The list uses the pure filter; the chips come from the pure region helper.
+  expect(renderList).toContain("filterProxies(proxies, proxyFilter)");
+  expect(renderList).toContain("renderFilterChips()");
+  expect(renderChips).toContain("distinctRegions(proxies)");
+  expect(renderChips).toContain('byId("filter-regions")');
+
+  // Exactly two button factories: the "All" chip and one region chip. Both are
+  // <button type="button"> and both are appended to the #filter-regions wrap.
+  expect(renderChips.match(/document\.createElement\("button"\)/g) ?? []).toHaveLength(2);
+  expect(renderChips).toContain('all.type = "button"');
+  expect(renderChips).toContain('chip.type = "button"');
+  expect(renderChips).toContain("wrap.append(all)");
+  expect(renderChips).toContain("wrap.append(chip)");
+  expect(renderChips).not.toContain('createElement("a")');
+  expect(renderChips).not.toContain('createElement("input")');
+  expect(renderChips).not.toContain('type = "submit"');
+
+  expect(reset).toContain("proxyFilter.regions.clear()");
+  expect(reset).toContain('byId("filter-latency-min").value = ""');
+  expect(reset).toContain('byId("filter-latency-max").value = ""');
+  expect(reset).toContain("renderProxies()");
+
+  const filterBar = htmlDivById(html, "proxy-filters");
+  expect(filterBar).not.toBe("");
+  // The chip container is empty markup: every chip is built as a button in JS.
+  expect(filterBar).toMatch(/<div class="filter-chips" id="filter-regions"><\/div>/);
+  expect(filterBar).toContain('id="filter-latency-min"');
+  expect(filterBar).toContain('id="filter-latency-max"');
+  expect(filterBar).toContain('id="filter-count"');
   expect(filterBar).not.toContain('type="submit"');
+  expect(filterBar).not.toContain("<form");
+
+  const resetTag = /<button\b[^>]*\bid="filter-reset"[^>]*>/.exec(filterBar)?.[0] ?? "";
+  expect(resetTag).toContain('type="button"');
+  expect(html.indexOf('id="proxy-filters"')).toBeLessThan(html.indexOf('id="proxy-score-bar"'));
 });
 
 test("the table shows a filtered count and an explicit no-match note", () => {

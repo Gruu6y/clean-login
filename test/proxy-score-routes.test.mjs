@@ -5,7 +5,37 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createEnvironmentManager } from "../lib/browser-environment.mjs";
 import { TOKEN_HEADER, startServer } from "../lib/server.mjs";
+
+// The two end-to-end score tests below run the real controller. Its preflight
+// needs an installed scoring browser: the executable and the fingerprint model
+// `ensureIdentity` draws from. CI has no such browser. Detect it once so those
+// tests run where the environment exists and are skipped, with the reason in
+// their name, where it does not. Only this specific missing environment skips;
+// an assertion failure inside a running test is still a failure.
+async function scoreBrowserAvailability() {
+  try {
+    const status = await createEnvironmentManager().status();
+    if (status?.ready) return { ready: true, reason: "" };
+    return {
+      ready: false,
+      reason:
+        status?.installed === true
+          ? "scoring browser is installed but its fingerprint model is not ready"
+          : "scoring browser is not installed (prepare it on the Providers page first)",
+    };
+  } catch (error) {
+    return {
+      ready: false,
+      reason: `scoring browser status could not be read: ${error?.message ?? error}`,
+    };
+  }
+}
+
+const scoreBrowser = await scoreBrowserAvailability();
+const scoreTest = scoreBrowser.ready ? test : test.skip;
+const scoreSkipNote = scoreBrowser.ready ? "" : ` — skipped: ${scoreBrowser.reason}`;
 
 const tmp = mkdtempSync(join(tmpdir(), "clean-login-score-routes-"));
 let service;
@@ -171,7 +201,7 @@ test("the score routes refuse another site's Origin", async () => {
 
 // The controller is not injected here: only the browser is. The measured
 // score must end up on the proxy row, in the list and in bootstrap.
-test("a measured score reaches the proxy row, the list and bootstrap", async () => {
+scoreTest(`a measured score reaches the proxy row, the list and bootstrap${scoreSkipNote}`, async () => {
   const { startServer } = await import("../lib/server.mjs");
   const dir = mkdtempSync(join(tmpdir(), "clean-login-score-e2e-"));
   let resolveScore;
@@ -263,7 +293,7 @@ test("a measured score reaches the proxy row, the list and bootstrap", async () 
   }
 });
 
-test("a second score while one runs is a 409 score_busy", async () => {
+scoreTest(`a second score while one runs is a 409 score_busy${scoreSkipNote}`, async () => {
   const { startServer } = await import("../lib/server.mjs");
   const dir = mkdtempSync(join(tmpdir(), "clean-login-score-busy-"));
   const local = await startServer({
