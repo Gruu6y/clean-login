@@ -44,6 +44,23 @@ export function providerCanSignIn(provider) {
   return Boolean(provider?.browserMethod && provider?.signInProvider);
 }
 
+// A provider card's add entry comes from the installed-plugin scan, and that
+// scan starts on the first /api/provider-sources read. The first answer
+// therefore says `scanning: true` and carries no sign-in methods, so without a
+// follow-up read every card would sit on "waiting for verification" with no
+// entry until the user reloads the page by hand. The page follows the scan
+// with a bounded number of extra reads; these are the bounds, and they are
+// exported so the bound itself is testable.
+export const PLUGIN_SCAN_POLL_INTERVAL_MS = 1200;
+export const PLUGIN_SCAN_POLL_MAX_ATTEMPTS = 24;
+
+// Pure decision: is there still a scan in flight whose result the cards need?
+// A settled scan (`scanning: false`), including one that failed with an error,
+// must not keep the loop alive.
+export function shouldPollPluginScan(pluginScan) {
+  return pluginScan?.scanning === true;
+}
+
 // The kinds a card marker can name. "pending" does not mean "nothing was
 // found": it means the method is runnable but its kind is only confirmed when
 // authorize() runs, so the card says "way to confirm" instead of "unknown".

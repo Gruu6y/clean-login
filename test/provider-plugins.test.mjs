@@ -165,6 +165,43 @@ test("an unavailable plugin scan degrades to the first layer with no false claim
   }
 });
 
+// Root cause 3 regression: a scan that failed WITH an error used to be worded
+// exactly like "this plugin has not verified the flow yet", which dresses a
+// broken scan up as an unimplemented feature. The reason must name the failure
+// and carry the raw diagnostic, on magpie-only cards and on local cards whose
+// verdict still depends on the scan.
+test("a failed plugin scan is worded as a failure, not as an unverified flow", () => {
+  const failure = { available: false, providers: [], error: "dirent is not defined", scanned: true };
+  const view = mergeProviderSources({ local: LOCAL, magpie: ["codex", "mystery-ai"], plugins: failure });
+  const map = byId(view);
+  for (const provider of [map.codex, map["mystery-ai"]]) {
+    expect(provider.capability.reason.en).toContain("The installed-plugin scan failed");
+    expect(provider.capability.reason.en).toContain("dirent is not defined");
+    expect(provider.capability.reason.en).not.toContain("has not verified");
+    for (const lang of LANGS) {
+      expect(provider.capability.reason[lang]).toBeTruthy();
+      expect(provider.capability.reason[lang]).toContain("dirent is not defined");
+    }
+  }
+  // The old presence note repeated the same "not verified" claim; it now names
+  // the failure too.
+  expect(map["mystery-ai"].presenceNote.en).toContain("The installed-plugin scan failed");
+  // The reason stays bounded even when the child reports a huge error.
+  const huge = byId(mergeProviderSources({
+    local: LOCAL,
+    magpie: ["codex"],
+    plugins: { available: false, providers: [], error: "x".repeat(5000), scanned: true },
+  })).codex;
+  expect(huge.capability.reason.en.length).toBeLessThan(600);
+  // A scan that never ran has no failure to report, so it must NOT claim one.
+  const never = byId(mergeProviderSources({
+    local: LOCAL,
+    magpie: ["mystery-ai"],
+    plugins: { available: false, providers: [] },
+  }));
+  expect(never["mystery-ai"].capability.reason.en).toContain("has not verified its browser sign-in method");
+});
+
 test("a plugin-only provider gets a fifth-presence card with its derived methods", () => {
   const plugins = {
     available: true,

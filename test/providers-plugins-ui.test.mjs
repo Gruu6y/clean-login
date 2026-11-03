@@ -45,6 +45,24 @@ test("the provider card renders the add entry for a browser method", () => {
   expect(providersArea).toContain('id="providers-list"');
 });
 
+test("the page follows a scan that is still running instead of asking for a reload", () => {
+  // Root cause 2: the first provider-sources read answers "scanning", so the
+  // page must make its own bounded follow-up reads and re-render the cards
+  // once the scan settles.
+  expect(app).toContain("shouldPollPluginScan");
+  expect(app).toContain("PLUGIN_SCAN_POLL_MAX_ATTEMPTS");
+  expect(app).toContain("PLUGIN_SCAN_POLL_INTERVAL_MS");
+  expect(app).toContain('api("api/provider-sources"');
+  // Never stack a request on an in-flight one, and never scan while hidden.
+  expect(app).toContain("pluginScanPoll.inflight");
+  expect(app).toContain("document.hidden");
+  // Giving up leaves an honest note instead of a forever "scanning" banner,
+  // and a scan that failed is named as a failure, in all four languages.
+  expect(app).toContain("providerPluginsScanTimedOut");
+  expect((app.match(/providerPluginsFailed:/g) || []).length).toBe(4);
+  expect((app.match(/providerPluginsScanTimedOut:/g) || []).length).toBe(4);
+});
+
 test("a merged card with a browser method can sign in, a key-only card cannot", () => {
   const view = mergeProviderSources({
     local: listProviders(),
