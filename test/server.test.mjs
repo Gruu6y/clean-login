@@ -7,6 +7,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "..");
+// Read the version instead of pinning it here: the suite should not need an
+// edit every time the package is released.
+const pkgVersion = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).version;
 const tmp = mkdtempSync(join(tmpdir(), "clean-login-"));
 let service;
 let port;
@@ -109,7 +112,7 @@ test("bootstrap returns the Host-driven shape with the public provider registry"
   const res = await raw("GET", "/api/bootstrap", auth());
   expect(res.status).toBe(200);
   const body = JSON.parse(res.body);
-  expect(body.version).toBe("0.1.0");
+  expect(body.version).toBe(pkgVersion);
   expect(body.service).toEqual({ status: "ready" });
   expect(body.providers.map((provider) => provider.id)).toEqual([
     "antigravity",
@@ -216,7 +219,7 @@ test("health stays a secretless liveness probe", async () => {
   expect(res.status).toBe(200);
   const body = JSON.parse(res.body);
   expect(body.ok).toBe(true);
-  expect(body.version).toBe("0.1.0");
+  expect(body.version).toBe(pkgVersion);
   expect(body.dataDir).toBeUndefined();
   // The most recent orphan sweep is reported as counts and a short skip
   // reason; no account key, provider or path leaks through health.
