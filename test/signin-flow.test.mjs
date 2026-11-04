@@ -6,7 +6,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SIGNIN_FLOW_MARKER, accountDir, accountProfileDir } from "../lib/account-identity.mjs";
+import {
+  SIGNIN_FLOW_MARKER,
+  accountDir,
+  accountProfileDir,
+  readAccountMeta,
+  writeAccountMeta,
+} from "../lib/account-identity.mjs";
 import { SignInBrowserError } from "../lib/browser-launcher.mjs";
 import {
   SIGNIN_STATES,
@@ -308,6 +314,97 @@ test("a failed write-back is a distinct error and never throws out of the flow",
   expect(flow.error.code).toBe("write_failed");
   expect(flow.error.message).toContain("auth.set refused");
   expect(state.browserClosed).toBe(1);
+});
+
+// The extended ownership ledger: a successful sign-in must record the exit it
+// used (or an honest direct login) without ever storing a proxy credential or
+// dropping a note / detection history that was already there.
+test("a sign-in records a direct login when no proxyMeta is given", async () => {
+  const { env, controller } = await harness();
+  await controller.startSignIn({ provider: "workbuddy" });
+  await controller.whenSettled();
+  const meta = await readAccountMeta(accountDir(env, "workbuddy", "workbuddy"));
+  expect(meta.version).toBe(1);
+  expect(meta.signedInAt).toEqual(expect.any(String));
+  expect(meta.lastLogin).toMatchObject({
+    proxyId: null,
+    proxyName: "",
+    region: "",
+    type: null,
+  });
+  expect(typeof meta.lastLogin.at).toBe("string");
+  expect(meta.loginHistory).toHaveLength(1);
+  expect(meta.loginHistory[0]).toEqual(meta.lastLogin);
+});
+
+test("a sign-in whitelists proxyMeta into the ledger", async () => {
+  const { env, controller } = await harness();
+  await controller.startSignIn({
+    provider: "workbuddy",
+    proxyMeta: {
+      id: "p-01",
+      name: "Hong Kong 01",
+      region: "香港",
+      type: "socks5",
+      password: "secret-pass",
+      host: "10.0.0.7",
+      port: 1080,
+      dir: "/home/user/.config/magpie",
+    },
+  });
+  await controller.whenSettled();
+  const path = accountDir(env, "workbuddy", "workbuddy");
+  const meta = await readAccountMeta(path);
+  expect(meta.lastLogin).toMatchObject({
+    proxyId: "p-01",
+    proxyName: "Hong Kong 01",
+    region: "香港",
+    type: "socks5",
+  });
+  expect(Object.keys(meta.lastLogin).sort()).toEqual(["at", "proxyId", "proxyName", "region", "type"]);
+  const text = JSON.stringify(meta);
+  for (const secret of ["secret-pass", "10.0.0.7", "1080", "/home/user"]) {
+    expect(text).not.toContain(secret);
+  }
+});
+
+test("a sign-in preserves an existing note, checks and login history", async () => {
+  const { env, controller } = await harness();
+  const dir = accountDir(env, "workbuddy", "workbuddy");
+  const earlierLogin = { at: "2026-11-01T00:00:00.000Z", proxyId: null, proxyName: "", region: "", type: null };
+  const earlierCheck = {
+    at: "2026-11-01T00:00:00.000Z",
+    grade: "A",
+    proxyId: null,
+    proxyName: "",
+    region: "",
+    exposure: 0,
+    summary: [],
+  };
+  await writeAccountMeta(dir, {
+    version: 1,
+    provider: "workbuddy",
+    key: "workbuddy",
+    accountId: "me",
+    uid: null,
+    signedInAt: "2026-11-01T00:00:00.000Z",
+    note: "keep this note",
+    lastLogin: earlierLogin,
+    loginHistory: [earlierLogin],
+    checks: [earlierCheck],
+  });
+  // Claim this exact identity so the write-back reuses the directory whose
+  // ledger we seeded (a fresh allocation would pick a new key).
+  await controller.startSignIn({ provider: "workbuddy", account: { key: "workbuddy" } });
+  await controller.whenSettled();
+  const meta = await readAccountMeta(dir);
+  expect(meta.note).toBe("keep this note");
+  expect(meta.checks).toEqual([earlierCheck]);
+  expect(meta.loginHistory).toHaveLength(2);
+  expect(meta.loginHistory[1]).toEqual(earlierLogin);
+  expect(meta.lastLogin.at).not.toBe(earlierLogin.at);
+  expect(meta.version).toBe(1);
+  expect(meta.provider).toBe("workbuddy");
 });
 
 test("chooseBrowserMethod prefers an explicit browser method and skips local", () => {

@@ -1037,6 +1037,194 @@ main { flex: 1; }
   .footer { align-items: flex-start; flex-direction: column; gap: 5px; }
 }
 
+/* --- accounts page v2 --------------------------------------------------- */
+
+.mini-button.primary { color: var(--accent); font-weight: 620; }
+.mini-button.primary:hover {
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  color: var(--accent);
+}
+
+.account-name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.account-name-line strong { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unverified-tag {
+  display: inline-block;
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line));
+  border-radius: 999px;
+  color: var(--warn);
+  font-size: 10px;
+  line-height: 1.5;
+  vertical-align: 1px;
+}
+
+.account-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.account-toolbar-search { flex: 1 1 200px; }
+.account-toolbar-sort { flex: 0 0 160px; }
+.account-toolbar input,
+.account-toolbar select {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.grade-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: 12px 0 6px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  list-style: none;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.grade-legend li { display: flex; align-items: center; gap: 5px; }
+.grade-legend .proxy-score { font-size: 12.5px; }
+.grade-legend-label { color: var(--faint); letter-spacing: 0.06em; }
+.grade-disclaimer {
+  margin: 0 0 12px;
+  color: var(--faint);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.account-note-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  resize: vertical;
+}
+
+.account-check-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+.account-check-hero .account-check-grade {
+  font-size: 32px;
+  line-height: 1;
+}
+.account-check-hero p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--text);
+}
+.check-verdict {
+  margin: 0 0 12px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 560;
+  line-height: 1.5;
+}
+.account-check-lines {
+  margin: 12px 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.account-check-lines li[data-tone="warn"] {
+  color: var(--danger);
+  font-weight: 560;
+}
+.check-failed-title {
+  margin: 0 0 4px;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 620;
+}
+
+.toasts {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+}
+.toast {
+  padding: 9px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+}
+
+@media (min-width: 941px) {
+  .account-table .proxy-table-head,
+  .account-table .proxy-row {
+    grid-template-columns:
+      minmax(146px, 1.1fr)
+      minmax(146px, 1fr)
+      minmax(120px, 0.8fr)
+      minmax(100px, 0.7fr)
+      minmax(112px, 0.8fr)
+      222px;
+  }
+}
+
+@media (max-width: 940px) {
+  .account-table .proxy-table-head { display: none; }
+  .account-table .account-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    grid-template-areas: none;
+  }
+  .account-table .account-row > div {
+    grid-area: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .account-table .account-row > div[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--faint);
+    font-size: 11px;
+    font-weight: 560;
+    flex: none;
+  }
+  .account-table .account-row > .account-cell-actions {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+    justify-content: flex-start;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; }
   .proxy-status.testing::before { animation: none; }

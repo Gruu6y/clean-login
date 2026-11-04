@@ -457,16 +457,17 @@ test("the UI is genuinely Host-driven", () => {
 });
 
 test("static files exist and carry no mock data or dead action buttons", () => {
-  for (const file of ["ui/index.html", "ui/style.css", "ui/app.js", "ui/account-state.js", "ui/proxy-state.js", "ui/provider-state.js", "ui/signin-state.js", "lib/provider-registry.mjs"]) {
+  for (const file of ["ui/index.html", "ui/style.css", "ui/app.js", "ui/account-state.js", "ui/account-view.js", "ui/proxy-state.js", "ui/provider-state.js", "ui/signin-state.js", "lib/provider-registry.mjs"]) {
     expect(existsSync(join(root, file))).toBe(true);
   }
   const html = readFileSync(join(root, "ui", "index.html"), "utf8");
-  // Two tabs, the one-time browser setup, the proxy dialog and delete
-  // confirmation controls, and the add-account dialog. Every button is wired
-  // in app.js below.
+  // Three tabs, the one-time browser setup, the proxy dialog, delete
+  // confirmation, the add-account dialog, and the accounts page v2 toolbar,
+  // filter chips and both account dialogs. Every button is wired in app.js.
   const buttonIds = [
     "tab-providers",
     "tab-proxies",
+    "tab-accounts",
     "retry",
     "add-proxy",
     "add-proxy-empty",
@@ -487,6 +488,23 @@ test("static files exist and carry no mock data or dead action buttons", () => {
     "signin-close-footer",
     "signin-start",
     "identities-retry",
+    "accounts-refresh",
+    "account-filter-all",
+    "account-filter-signed-in",
+    "account-filter-signed-out",
+    "account-detail-close",
+    "account-detail-dismiss",
+    "account-detail-check",
+    "account-detail-note-save",
+    "account-check-close",
+    "account-check-dismiss",
+    "account-check-cancel",
+    "account-check-reexit",
+    "account-check-details",
+    "account-check-change-exit",
+    "account-check-start",
+    "account-check-again",
+    "account-check-retry",
   ];
   expect((html.match(/<button\b/g) || []).length).toBe(buttonIds.length);
   for (const id of buttonIds) expect(html).toContain(`id="${id}"`);

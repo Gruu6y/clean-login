@@ -9,6 +9,7 @@ import {
   ScoreBrowserError,
   SignInBrowserError,
   buildLaunchInput,
+  launchIdentityCheckBrowser,
   launchScoreBrowser,
   launchSignInBrowser,
   openSignInBrowser,
@@ -542,3 +543,221 @@ test("launchScoreBrowser passes the page deadline to the host", async () => {
   await handle.close();
 });
 
+
+// The identity check runs headless in its own `check-profile/` directory. The
+// headless flag must reach all three launch sites, and the new host must be
+// forked with that flag and the page deadline in its payload.
+test("buildLaunchInput defaults to headless false and threads a true value", () => {
+  const args = { url: "https://who.1ms.dog/zh-cn/", profileDir: "/profiles/a", identity: {} };
+  expect(buildLaunchInput(args).launch.headless).toBe(false);
+  expect(buildLaunchInput({ ...args, headless: true }).launch.headless).toBe(true);
+  expect(buildLaunchInput({ ...args, headless: false }).launch.headless).toBe(false);
+});
+
+test("openSignInBrowser passes headless to both camoufox calls", async () => {
+  const dir = await tempDir();
+  const calls = {};
+  const camoufox = {
+    async launchOptions(options) {
+      calls.launchOptions = options;
+      return { executablePath: options.executable_path };
+    },
+    async NewBrowser(_playwright, options) {
+      calls.newBrowser = options;
+      return { pages: () => [{ goto: async () => {} }], on: () => {}, close: async () => {} };
+    },
+  };
+  await openSignInBrowser({
+    executablePath: join(dir, "camoufox.exe"),
+    url: "https://who.1ms.dog/zh-cn/",
+    profileDir: join(dir, "check-profile"),
+    identity: { tag: "pin" },
+    headless: true,
+    deps: {
+      checkExecutable: async () => true,
+      loadCamoufox: async () => camoufox,
+      loadPlaywright: async () => ({ firefox: {} }),
+    },
+  });
+  expect(calls.launchOptions.headless).toBe(true);
+  expect(calls.newBrowser.headless).toBe(true);
+});
+
+test("openSignInBrowser is headless false by default", async () => {
+  const dir = await tempDir();
+  const calls = {};
+  const camoufox = {
+    async launchOptions(options) {
+      calls.launchOptions = options;
+      return {};
+    },
+    async NewBrowser(_playwright, options) {
+      calls.newBrowser = options;
+      return { pages: () => [{ goto: async () => {} }], on: () => {}, close: async () => {} };
+    },
+  };
+  await openSignInBrowser({
+    executablePath: join(dir, "camoufox.exe"),
+    url: "https://x/signin",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    deps: {
+      checkExecutable: async () => true,
+      loadCamoufox: async () => camoufox,
+      loadPlaywright: async () => ({ firefox: {} }),
+    },
+  });
+  expect(calls.launchOptions.headless).toBe(false);
+  expect(calls.newBrowser.headless).toBe(false);
+});
+
+test("launchIdentityCheckBrowser reports the verdict text the host sends", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 21;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  const captured = {};
+  const handle = await launchIdentityCheckBrowser({
+    executablePath: exe,
+    url: "https://who.1ms.dog/zh-cn/",
+    profileDir: join(dir, "check-profile"),
+    identity: { tag: "pin" },
+    headless: true,
+    timeoutMs: 42_000,
+    deps: {
+      hostPath: "/fake/identity-check-browser-host.mjs",
+      fork: (hostPath, args) => {
+        captured.hostPath = hostPath;
+        queueMicrotask(async () => {
+          captured.payload = JSON.parse(await readFile(args[0], "utf8"));
+          child.emit("message", { type: "ready", pid: 21 });
+          child.emit("message", { type: "identity", text: "评分 B" });
+        });
+        return child;
+      },
+    },
+  });
+  expect(handle.pid).toBe(21);
+  expect(captured.hostPath).toBe("/fake/identity-check-browser-host.mjs");
+  expect(captured.payload.headless).toBe(true);
+  expect(captured.payload.timeoutMs).toBe(42_000);
+  expect(captured.payload.profileDir).toBe(join(dir, "check-profile"));
+  expect(await handle.result).toEqual({ text: "评分 B" });
+  await handle.close();
+});
+
+test("launchIdentityCheckBrowser defaults to headless true", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 22;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  const captured = {};
+  const handle = await launchIdentityCheckBrowser({
+    executablePath: exe,
+    url: "https://who.1ms.dog/zh-cn/",
+    profileDir: join(dir, "check-profile"),
+    identity: {},
+    deps: {
+      fork: (_hostPath, args) => {
+        queueMicrotask(async () => {
+          captured.payload = JSON.parse(await readFile(args[0], "utf8"));
+          child.emit("message", { type: "ready", pid: 22 });
+          child.emit("message", { type: "identity", text: "评分 A" });
+        });
+        return child;
+      },
+    },
+  });
+  expect(captured.payload.headless).toBe(true);
+  expect(await handle.result).toEqual({ text: "评分 A" });
+  await handle.close();
+});
+
+test("launchIdentityCheckBrowser maps a host error to a launcher error", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 23;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  const handle = await launchIdentityCheckBrowser({
+    executablePath: exe,
+    url: "https://who.1ms.dog/zh-cn/",
+    profileDir: join(dir, "check-profile"),
+    identity: {},
+    deps: {
+      fork: () => {
+        queueMicrotask(() => {
+          child.emit("message", { type: "ready", pid: 23 });
+          child.emit("message", { type: "error", code: "page_timeout", message: "no verdict" });
+        });
+        return child;
+      },
+    },
+  });
+  await expect(handle.result).rejects.toBeInstanceOf(SignInBrowserError);
+  await expect(handle.result).rejects.toMatchObject({ code: "page_timeout" });
+  await handle.close();
+});
+
+test("launchIdentityCheckBrowser refuses a missing executable before forking", async () => {
+  const dir = await tempDir();
+  await expect(
+    launchIdentityCheckBrowser({
+      executablePath: join(dir, "missing.exe"),
+      url: "https://who.1ms.dog/zh-cn/",
+      profileDir: join(dir, "check-profile"),
+      identity: {},
+      deps: {
+        fork: () => {
+          throw new Error("must not fork");
+        },
+      },
+    }),
+  ).rejects.toMatchObject({ code: "executable_missing" });
+});
+
+test("launchIdentityCheckBrowser refuses a missing URL", async () => {
+  await expect(
+    launchIdentityCheckBrowser({ url: "", profileDir: "/p", identity: {} }),
+  ).rejects.toMatchObject({ code: "url_missing" });
+});
+
+test("launchIdentityCheckBrowser times out when the host never opens", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 24;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  await expect(
+    launchIdentityCheckBrowser({
+      executablePath: exe,
+      url: "https://who.1ms.dog/zh-cn/",
+      profileDir: join(dir, "check-profile"),
+      identity: {},
+      launchTimeoutMs: 30,
+      deps: { fork: () => child },
+    }),
+  ).rejects.toMatchObject({ code: "launch_timeout" });
+});

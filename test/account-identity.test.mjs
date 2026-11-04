@@ -11,10 +11,12 @@ import {
   camoufoxOs,
   decodeSegment,
   ensureIdentity,
+  readIdentity,
   removeAccountDir,
   requireFingerprintModel,
   safeSegment,
 } from "../lib/account-identity.mjs";
+import { readFingerprintSummary } from "../lib/account-summary.mjs";
 
 const tempDirs = [];
 
@@ -166,6 +168,88 @@ test("a malformed stored pin is not trusted", async () => {
   });
   expect(created).toBe(true);
   expect(identity).toEqual({ tag: "regenerated" });
+});
+
+// `readIdentity` is read-only: the detection engine uses it to prove a pin
+// exists before it opens a browser, without ever drawing a new fingerprint as
+// a side effect of merely looking.
+test("readIdentity returns the stored pin without generating one", async () => {
+  const dir = await tempDir();
+  const generated = [];
+  const identity = { webgl: { vendor: "X" }, nested: { a: 1 } };
+  await ensureIdentity(dir, {
+    generate: async () => {
+      generated.push(1);
+      return identity;
+    },
+  });
+  expect(generated).toHaveLength(1);
+  expect(await readIdentity(dir)).toEqual(identity);
+  // Reading never calls a generator and never rewrites the file.
+  expect(generated).toHaveLength(1);
+});
+
+test("readIdentity returns null for a missing, malformed or non-object pin", async () => {
+  const dir = await tempDir();
+  expect(await readIdentity(dir)).toBeNull();
+  expect(await readIdentity(null)).toBeNull();
+  // Reading a missing pin must not create the file.
+  await expect(readFile(join(dir, IDENTITY_FILE), "utf8")).rejects.toBeTruthy();
+
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, IDENTITY_FILE), "{ not json");
+  expect(await readIdentity(dir)).toBeNull();
+  await writeFile(join(dir, IDENTITY_FILE), "[1, 2]");
+  expect(await readIdentity(dir)).toBeNull();
+  await writeFile(join(dir, IDENTITY_FILE), "null");
+  expect(await readIdentity(dir)).toBeNull();
+});
+
+test("readFingerprintSummary digests the pin bytes and reports the pinned time", async () => {
+  const dir = await tempDir();
+  const bytes = Buffer.from('{"tag":"pin"}', "utf8");
+  const fixedTime = new Date("2026-11-04T08:09:10.000Z");
+  const summary = await readFingerprintSummary(dir, {
+    readFile: async () => bytes,
+    stat: async () => ({ mtime: fixedTime }),
+  });
+  const { createHash } = await import("node:crypto");
+  const hex = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+  expect(summary).toEqual({
+    id: `${hex.slice(0, 4)}·${hex.slice(4)}`,
+    pinnedAt: fixedTime.toISOString(),
+  });
+  expect(summary.id).toMatch(/^[0-9a-f]{4}·[0-9a-f]{8}$/);
+});
+
+test("readFingerprintSummary is empty for a missing or corrupt pin", async () => {
+  const dir = await tempDir();
+  expect(await readFingerprintSummary(dir)).toEqual({ id: null, pinnedAt: null });
+  expect(
+    await readFingerprintSummary(dir, {
+      readFile: async () => "{ not json",
+      stat: async () => ({ mtime: new Date() }),
+    }),
+  ).toEqual({ id: null, pinnedAt: null });
+  expect(
+    await readFingerprintSummary(dir, {
+      readFile: async () => "[1]",
+      stat: async () => ({ mtime: new Date() }),
+    }),
+  ).toEqual({ id: null, pinnedAt: null });
+});
+
+test("readFingerprintSummary never returns the identity object or a path", async () => {
+  const dir = await tempDir();
+  const bytes = Buffer.from(JSON.stringify({ password: "secret", host: "10.0.0.7" }), "utf8");
+  const summary = await readFingerprintSummary(dir, {
+    readFile: async () => bytes,
+    stat: async () => ({ mtime: new Date("2026-11-04T00:00:00.000Z") }),
+  });
+  expect(JSON.stringify(summary)).not.toContain("secret");
+  expect(JSON.stringify(summary)).not.toContain("10.0.0.7");
+  expect(JSON.stringify(summary)).not.toContain(dir);
+  expect(Object.keys(summary).sort()).toEqual(["id", "pinnedAt"]);
 });
 
 test("removeAccountDir removes the profile and the pin together", async () => {

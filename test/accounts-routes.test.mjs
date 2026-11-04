@@ -78,6 +78,16 @@ test("GET /api/accounts lists the ledger fields and the signed-in flag", async (
   const res = await api("GET", "/api/accounts");
   expect(res.status).toBe(200);
   const body = await res.json();
+  // No identity.json was written for these accounts, so the fingerprint
+  // summary is honestly empty rather than invented.
+  const extras = {
+    note: "",
+    lastLogin: null,
+    loginHistory: [],
+    lastCheck: null,
+    checks: [],
+    fingerprint: { id: null, pinnedAt: null },
+  };
   expect(body.accounts).toEqual([
     {
       provider: "workbuddy",
@@ -86,6 +96,7 @@ test("GET /api/accounts lists the ledger fields and the signed-in flag", async (
       uid: "u-1",
       signedInAt: "2026-11-03T10:00:00.000Z",
       signedIn: true,
+      ...extras,
     },
     {
       provider: "workbuddy",
@@ -94,12 +105,100 @@ test("GET /api/accounts lists the ledger fields and the signed-in flag", async (
       uid: "u-2",
       signedInAt: "2026-11-02T09:00:00.000Z",
       signedIn: false,
+      ...extras,
     },
   ]);
   // No path and no credential in the response.
   const text = JSON.stringify(body);
   expect(text).not.toContain(tmp);
   expect(text).not.toContain("SECRET");
+});
+
+test("GET /api/accounts whitelists optional ledger fields", async () => {
+  await writeAccountMeta(signedInDir, {
+    version: 1,
+    provider: "workbuddy",
+    key: "workbuddy",
+    accountId: "signed-in",
+    uid: "u-1",
+    signedInAt: "2026-11-03T10:00:00.000Z",
+    note: "a note",
+    lastLogin: { at: "2026-11-03T10:00:00.000Z", proxyId: "p-1", proxyName: "HK", region: "香港", type: "socks5", password: "secret-pass", host: "10.0.0.1", port: 1080 },
+    loginHistory: [{ at: "2026-11-03T09:00:00.000Z", proxyId: null, proxyName: "", region: "", type: null }],
+    checks: [{ at: "2026-11-03T08:00:00.000Z", grade: "B", proxyId: "p-1", proxyName: "HK", region: "香港", exposure: 2, summary: ["one"], password: "secret-pass", dir: "/secret/path" }],
+  });
+  const res = await api("GET", "/api/accounts");
+  const account = (await res.json()).accounts.find((a) => a.key === "workbuddy");
+  expect(account.note).toBe("a note");
+  expect(account.lastLogin).toEqual({
+    at: "2026-11-03T10:00:00.000Z",
+    proxyId: "p-1",
+    proxyName: "HK",
+    region: "香港",
+    type: "socks5",
+  });
+  expect(account.loginHistory).toHaveLength(1);
+  expect(account.lastCheck).toEqual({
+    at: "2026-11-03T08:00:00.000Z",
+    grade: "B",
+    proxyId: "p-1",
+    proxyName: "HK",
+    region: "香港",
+    exposure: 2,
+    summary: ["one"],
+  });
+  expect(account.checks).toHaveLength(1);
+  expect(JSON.stringify(account)).not.toContain("secret-pass");
+  expect(JSON.stringify(account)).not.toContain("/secret/path");
+});
+
+test("PATCH /api/accounts saves a note and keeps the rest of the ledger", async () => {
+  await writeAccountMeta(signedInDir, {
+    version: 1,
+    provider: "workbuddy",
+    key: "workbuddy",
+    accountId: "signed-in",
+    uid: "u-1",
+    signedInAt: "2026-11-03T10:00:00.000Z",
+    checks: [{ at: "2026-11-03T08:00:00.000Z", grade: "A", proxyId: null, proxyName: "", region: "", exposure: 0, summary: [] }],
+    loginHistory: [],
+  });
+  const res = await fetch(`http://127.0.0.1:${service.port}/api/accounts/workbuddy/workbuddy`, {
+    method: "PATCH",
+    headers: { [TOKEN_HEADER]: token, "content-type": "application/json" },
+    body: JSON.stringify({ note: "  saved note  " }),
+  });
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.ok).toBe(true);
+  expect(body.account.note).toBe("saved note");
+  expect(body.account.provider).toBe("workbuddy");
+  expect(body.account.key).toBe("workbuddy");
+  expect(body.account.lastCheck.grade).toBe("A");
+  expect(body.account.fingerprint.id).toBeNull();
+  const meta = await readAccountMeta(signedInDir);
+  expect(meta.note).toBe("saved note");
+  expect(meta.checks).toHaveLength(1);
+  expect(JSON.stringify(body)).not.toContain(tmp);
+  expect(JSON.stringify(body)).not.toContain("SECRET");
+});
+
+test("PATCH /api/accounts rejects an invalid note and an unknown account", async () => {
+  const patch = (path, body) =>
+    fetch(`http://127.0.0.1:${service.port}${path}`, {
+      method: "PATCH",
+      headers: { [TOKEN_HEADER]: token, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const overlong = await patch("/api/accounts/workbuddy/workbuddy", { note: "n".repeat(201) });
+  expect(overlong.status).toBe(400);
+  expect((await overlong.json()).error).toBe("invalid_note");
+  const nonString = await patch("/api/accounts/workbuddy/workbuddy", { note: 7 });
+  expect(nonString.status).toBe(400);
+  expect((await nonString.json()).error).toBe("invalid_note");
+  const unknown = await patch("/api/accounts/workbuddy/workbuddy%23unknown", { note: "x" });
+  expect(unknown.status).toBe(404);
+  expect((await unknown.json()).error).toBe("not_found");
 });
 
 test("GET /api/accounts requires the page token", async () => {

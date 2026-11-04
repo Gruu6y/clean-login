@@ -24,12 +24,20 @@ import {
 } from "./provider-state.js";
 import { signInActive, signInPayload } from "./signin-state.js";
 import {
+  accountCheckPath,
   accountIdentityPath,
   accountIdentityView,
   accountLabel,
   defaultAccountKey,
   retiredAccounts,
 } from "./account-state.js";
+import {
+  accountView,
+  filterAccounts,
+  formatCheckSummary,
+  formatExit,
+  sortAccounts,
+} from "./account-view.js";
 import {
   environmentPercent,
   environmentPhase,
@@ -261,6 +269,132 @@ const messages = {
     testSocksHost: "The SOCKS5 proxy could not reach the test endpoint.",
     testSocksGeneral: "The SOCKS5 proxy could not connect.",
     testUnknown: "Could not reach the test endpoint through this proxy.",
+    accounts: "Accounts",
+    accountsTitle: "Accounts",
+    accountsCopy: "Every account used with Clean Login, its pinned browser fingerprint, and who.1ms.dog's verdict on that identity.",
+    accountsRefresh: "Refresh",
+    accountsRefreshing: "Refreshing…",
+    accountsRefreshed: "Read {count} accounts.",
+    accountSearchLabel: "Search accounts",
+    accountSearchPlaceholder: "Search accounts",
+    accountSortLabel: "Sort",
+    accountSortLastLogin: "Recent login",
+    accountSortName: "Account name",
+    accountSortProvider: "Provider",
+    accountSortGrade: "Check grade",
+    accountFilterLabel: "Status",
+    accountFilterAll: "All",
+    accountFilterSignedIn: "Signed in",
+    accountFilterSignedOut: "Signed out",
+    accountFilterCount: "Showing {shown} / {total}",
+    accountEmpty: "No accounts yet",
+    accountEmptyCopy: "Accounts appear here after a sign-in through Clean Login.",
+    accountNoMatch: "No accounts match these filters.",
+    accountColName: "Account",
+    accountColFingerprint: "Fingerprint",
+    accountColLastLogin: "Last login",
+    accountColCheck: "Identity check",
+    accountColStatus: "Status",
+    accountColActions: "Actions",
+    accountUnverified: "Unverified flow",
+    accountUnverifiedTitle: "This account came from a sign-in flow that has not been verified in Clean Login yet.",
+    accountSignedIn: "Signed in",
+    accountSignedOut: "Signed out · identity kept",
+    accountCheckNone: "Not checked",
+    accountChecking: "Checking…",
+    accountFingerprintPinned: "Pinned {time}",
+    accountFingerprintNone: "No pinned fingerprint",
+    accountExitDirect: "Direct",
+    accountLastLoginAt: "{time} · {exit}",
+    accountCheckExposure: "{count} places may expose you",
+    accountRelogin: "Sign in again",
+    accountReloginTitle: "Reuse this account's kept fingerprint instead of drawing a new one.",
+    accountCheck: "Check",
+    accountDetail: "Details",
+    accountClear: "Clear identity",
+    accountCheckBusy: "A check is already in progress.",
+    gradeLegendLabel: "Verdict",
+    gradeA: "Clean · ready to use",
+    gradeB: "Usable · some traces",
+    gradeC: "Change the exit",
+    gradeD: "Do not use this exit",
+    gradeDisclaimer: "This is a verdict from the third-party site who.1ms.dog. It is not a provider risk-control conclusion, and it is not a fingerprint score of our own.",
+    gradeMeaningA: "Clean: the exit and identity agree, safe to use.",
+    gradeMeaningB: "Usable: the site can see a proxy, but nothing contradicts itself.",
+    gradeMeaningC: "Change the exit: identity and exit disagree. Try another exit.",
+    gradeMeaningD: "Do not use this exit: several contradictions. Change the exit first.",
+    accountDetailTitle: "Account",
+    accountDetailProvider: "Provider",
+    accountDetailKey: "Account key",
+    accountDetailFingerprint: "Fingerprint id",
+    accountDetailPinnedAt: "Pinned at",
+    accountDetailLastLoginExit: "Last login exit",
+    accountDetailStatus: "Status",
+    accountDetailNote: "Note",
+    accountDetailNoteSave: "Save note",
+    accountDetailNoteSaving: "Saving…",
+    accountDetailNoteHint: "Only the note is stored on this account, up to 200 characters.",
+    accountDetailNoteEmpty: "No note yet.",
+    accountDetailSaved: "The note was saved.",
+    accountDetailNoteTooLong: "The note is too long.",
+    accountDetailSigninHint: "This account is still signed in. Sign it out in magpie before clearing its identity.",
+    accountDetailRetiredHint: "The fingerprint and the account's profile live together: unless you clear the identity, signing in again reuses the same fingerprint.",
+    accountDetailHistoryTitle: "Check history",
+    accountDetailHistoryEmpty: "Not checked yet. A check opens who.1ms.dog with this identity.",
+    accountDetailHistoryLine: "{grade} · {time} · {exit} · {exposure} exposures",
+    accountDetailDismiss: "Close",
+    accountCheckFailedExit: "Exit: {exit}",
+    accountCheckTitle: "Identity check",
+    accountCheckCopy: "Opens who.1ms.dog with this account's own browser fingerprint and reads back the site's verdict.",
+    accountCheckProxyLabel: "Proxy IP",
+    accountCheckProxyDirect: "No proxy (direct)",
+    accountCheckProxyHint: "The exit used at sign-in is not recorded; this check uses the exit you select here.",
+    accountCheckTargetLabel: "Target site",
+    accountCheckEtaLabel: "Expected time",
+    accountCheckEtaValue: "As reported by the site",
+    accountCheckExitLabel: "Exit",
+    accountCheckTimeLabel: "Time",
+    accountCheckGradeLabel: "Grade",
+    accountCheckIdentityLabel: "Identity used",
+    accountCheckNote: "The site cannot be embedded. Clean Login opens an isolated window, reads the verdict, then closes it.",
+    accountCheckStart: "Start check",
+    accountCheckRunningOpening: "Opening the isolated browser…",
+    accountCheckRunningReading: "Reading the site's verdict…",
+    accountCheckElapsed: "{seconds}s",
+    accountCheckCancel: "Cancel check",
+    accountCheckCancelled: "The check was cancelled. No verdict was produced.",
+    accountCheckSummary: "who.1ms.dog verdict · exit {exit} · {time}",
+    accountCheckNoExposure: "The site flagged no contradictions",
+    accountCheckResultNote: "The verdict is stored on this account only; it is not sent anywhere else.",
+    accountCheckAgain: "Check again",
+    accountCheckReexit: "Check with another exit",
+    accountCheckDetails: "Details",
+    accountCheckFailedTitle: "The check did not finish",
+    accountCheckFailedDetail: "{reason} (exit: {exit})",
+    accountCheckFailedNoVerdict: "This check did not finish, so no new verdict was produced.",
+    accountCheckFailedKeepPrevious: "The previous verdict is still {grade} · {time} ({exit}); nothing changed.",
+    accountCheckFailedNoPrevious: "This account has no verdict record yet.",
+    accountCheckRetry: "Retry",
+    accountCheckChangeExit: "Choose another exit",
+    accountCheckDismiss: "Close",
+    checkErrorBrowserMissing: "The isolated browser is missing. Prepare the login browser first.",
+    checkErrorExecutableMissing: "The browser executable is missing. Re-prepare the login browser.",
+    checkErrorIdentityMissing: "This account has no pinned fingerprint yet, so the check could not start.",
+    checkErrorLaunchFailed: "The isolated browser did not start. The install directory may be in use or a file may be missing.",
+    checkErrorLaunchTimeout: "The isolated browser took too long to start.",
+    checkErrorPageTimeout: "who.1ms.dog did not return a verdict in time. The site may be slow or the exit may have swallowed the request.",
+    checkErrorVerdictMissing: "who.1ms.dog did not return a verdict this time.",
+    checkErrorCancelled: "The check was cancelled, so it produced no verdict.",
+    checkErrorProxyNotFound: "The selected proxy no longer exists. Choose another exit.",
+    checkErrorAccountNotFound: "This account no longer exists. Refresh the list.",
+    checkErrorCheckBusy: "A check is already in progress. Wait for it to finish.",
+    checkErrorInternal: "The local service could not complete this check.",
+    checkErrorUnknown: "The check stopped before it produced a verdict.",
+    errorInvalidNote: "The note is not valid.",
+    toastNoteSaved: "The note was saved.",
+    toastCheckDone: "Check finished · grade {grade}.",
+    toastCheckCancelled: "The check was cancelled.",
+    toastRefreshed: "Accounts refreshed.",
   },
   "zh-Hans": {
     title: "干净登录",
@@ -478,6 +612,132 @@ const messages = {
     testSocksHost: "SOCKS5 代理无法访问检测地址。",
     testSocksGeneral: "SOCKS5 代理无法连接。",
     testUnknown: "无法通过这个代理访问检测地址。",
+    accounts: "账号",
+    accountsTitle: "账号",
+    accountsCopy: "通过干净登录登录过的每个账号、它锁定的浏览器指纹，以及 who.1ms.dog 对这个身份的判定。",
+    accountsRefresh: "刷新",
+    accountsRefreshing: "刷新中…",
+    accountsRefreshed: "已读取 {count} 个账号。",
+    accountSearchLabel: "搜索账号",
+    accountSearchPlaceholder: "搜索账号",
+    accountSortLabel: "排序",
+    accountSortLastLogin: "最近登录",
+    accountSortName: "账号名",
+    accountSortProvider: "供应商",
+    accountSortGrade: "检测评级",
+    accountFilterLabel: "状态",
+    accountFilterAll: "全部",
+    accountFilterSignedIn: "已登录",
+    accountFilterSignedOut: "已登出",
+    accountFilterCount: "显示 {shown} / 共 {total}",
+    accountEmpty: "还没有账号",
+    accountEmptyCopy: "通过干净登录登录之后，账号会显示在这里。",
+    accountNoMatch: "没有符合筛选条件的账号。",
+    accountColName: "账号",
+    accountColFingerprint: "指纹",
+    accountColLastLogin: "上次登录",
+    accountColCheck: "身份检测",
+    accountColStatus: "状态",
+    accountColActions: "操作",
+    accountUnverified: "未验证流程",
+    accountUnverifiedTitle: "这个账号来自一条还没有在干净登录中验证过的登录流程。",
+    accountSignedIn: "已登录",
+    accountSignedOut: "已登出 · 保留身份",
+    accountCheckNone: "未检测",
+    accountChecking: "检测中…",
+    accountFingerprintPinned: "固定于 {time}",
+    accountFingerprintNone: "没有固定指纹",
+    accountExitDirect: "直连",
+    accountLastLoginAt: "{time} · {exit}",
+    accountCheckExposure: "{count} 处可能暴露你",
+    accountRelogin: "重新登录",
+    accountReloginTitle: "沿用这个账号保留的指纹重新登录，不会生成新的身份。",
+    accountCheck: "检测",
+    accountDetail: "详情",
+    accountClear: "清除身份",
+    accountCheckBusy: "已有检测在进行。",
+    gradeLegendLabel: "判定",
+    gradeA: "干净 · 可以用",
+    gradeB: "可用 · 有痕迹",
+    gradeC: "建议换出口",
+    gradeD: "不要用这个出口",
+    gradeDisclaimer: "这是第三方站点 who.1ms.dog 的判定，不等于供应商风控结论，也不是我们自建的指纹评分。",
+    gradeMeaningA: "干净：出口和身份对得上，可以拿去用。",
+    gradeMeaningB: "可用：站点看得出你走了一条代理，但没有自相矛盾。",
+    gradeMeaningC: "建议换出口：身份和出口对不上，换一个出口再测。",
+    gradeMeaningD: "不要用这个出口：多处矛盾，先换成别的出口。",
+    accountDetailTitle: "账号",
+    accountDetailProvider: "供应商",
+    accountDetailKey: "账号键",
+    accountDetailFingerprint: "指纹 id",
+    accountDetailPinnedAt: "固定时间",
+    accountDetailLastLoginExit: "上次登录出口",
+    accountDetailStatus: "状态",
+    accountDetailNote: "备注",
+    accountDetailNoteSave: "保存备注",
+    accountDetailNoteSaving: "保存中…",
+    accountDetailNoteHint: "备注只保存在这个账号上，最多 200 个字符。",
+    accountDetailNoteEmpty: "还没有备注。",
+    accountDetailSaved: "备注已保存。",
+    accountDetailNoteTooLong: "备注过长。",
+    accountDetailSigninHint: "该账号仍在登录状态。先在 magpie 中登出，这里才能清除它的身份。",
+    accountDetailRetiredHint: "指纹与该账号的配置目录同生共死：只要不「清除身份」，再次登录会重用同一个指纹。",
+    accountDetailHistoryTitle: "检测历史",
+    accountDetailHistoryEmpty: "还没有检测过。检测会用这个身份打开 who.1ms.dog。",
+    accountDetailHistoryLine: "{grade} · {time} · {exit} · {exposure} 处暴露",
+    accountDetailDismiss: "关闭",
+    accountCheckFailedExit: "出口：{exit}",
+    accountCheckTitle: "身份检测",
+    accountCheckCopy: "会用这个账号自己的浏览器指纹打开 who.1ms.dog，并读回站点的判定。",
+    accountCheckProxyLabel: "代理 IP",
+    accountCheckProxyDirect: "不使用代理（直连）",
+    accountCheckProxyHint: "登录时用的出口不会被记录；这次检测看的是你在这里选的出口。",
+    accountCheckTargetLabel: "目标站点",
+    accountCheckEtaLabel: "预计用时",
+    accountCheckEtaValue: "以站点实际返回为准",
+    accountCheckExitLabel: "出口",
+    accountCheckTimeLabel: "时间",
+    accountCheckGradeLabel: "评级",
+    accountCheckIdentityLabel: "使用身份",
+    accountCheckNote: "该站点不允许被其他页面嵌入。干净登录会打开一个隔离窗口，读完判定就关掉。",
+    accountCheckStart: "开始检测",
+    accountCheckRunningOpening: "正在打开隔离浏览器…",
+    accountCheckRunningReading: "正在读取站点的判定…",
+    accountCheckElapsed: "{seconds} 秒",
+    accountCheckCancel: "取消检测",
+    accountCheckCancelled: "检测已取消，本次没有产生判定。",
+    accountCheckSummary: "who.1ms.dog 判定 · 出口 {exit} · {time}",
+    accountCheckNoExposure: "站点没有标出任何矛盾",
+    accountCheckResultNote: "判定只记在这个账号上，不会上报到别处。",
+    accountCheckAgain: "重新检测",
+    accountCheckReexit: "换出口重测",
+    accountCheckDetails: "详情",
+    accountCheckFailedTitle: "这次检测没有完成",
+    accountCheckFailedDetail: "{reason}（出口：{exit}）",
+    accountCheckFailedNoVerdict: "这次检测没有完成，所以没有产生新判定。",
+    accountCheckFailedKeepPrevious: "上一次的判定仍然是 {grade} · {time}（{exit}），没有变化。",
+    accountCheckFailedNoPrevious: "这个账号还没有任何判定记录。",
+    accountCheckRetry: "重试",
+    accountCheckChangeExit: "换个出口",
+    accountCheckDismiss: "关闭",
+    checkErrorBrowserMissing: "隔离浏览器未安装，请先准备登录浏览器。",
+    checkErrorExecutableMissing: "浏览器可执行文件缺失，请重新准备登录浏览器。",
+    checkErrorIdentityMissing: "这个账号还没有固定指纹，检测无法开始。",
+    checkErrorLaunchFailed: "隔离浏览器没起来，通常是安装目录被占用或文件缺失。",
+    checkErrorLaunchTimeout: "隔离浏览器启动超时。",
+    checkErrorPageTimeout: "who.1ms.dog 没有在限定时间内给出判定。可能是站点慢，也可能是出口把请求吞了。",
+    checkErrorVerdictMissing: "who.1ms.dog 这次没有给出判定。",
+    checkErrorCancelled: "检测已取消，因此没有产生判定。",
+    checkErrorProxyNotFound: "所选代理已不存在，请换一个出口。",
+    checkErrorAccountNotFound: "这个账号已不存在，请刷新列表。",
+    checkErrorCheckBusy: "已有检测在进行，请等它结束。",
+    checkErrorInternal: "本地服务无法完成这次检测。",
+    checkErrorUnknown: "检测在产生判定之前中止了。",
+    errorInvalidNote: "备注无效。",
+    toastNoteSaved: "备注已保存。",
+    toastCheckDone: "检测完成 · 评级 {grade}。",
+    toastCheckCancelled: "检测已取消。",
+    toastRefreshed: "账号列表已刷新。",
   },
   "zh-Hant": {
     title: "乾淨登入",
@@ -695,6 +955,132 @@ const messages = {
     testSocksHost: "SOCKS5 代理無法存取檢測位址。",
     testSocksGeneral: "SOCKS5 代理無法連線。",
     testUnknown: "無法透過這個代理存取檢測位址。",
+    accounts: "帳號",
+    accountsTitle: "帳號",
+    accountsCopy: "透過乾淨登入登入過的每個帳號、它鎖定的瀏覽器指紋，以及 who.1ms.dog 對這個身分的判定。",
+    accountsRefresh: "重新整理",
+    accountsRefreshing: "重新整理中…",
+    accountsRefreshed: "已讀取 {count} 個帳號。",
+    accountSearchLabel: "搜尋帳號",
+    accountSearchPlaceholder: "搜尋帳號",
+    accountSortLabel: "排序",
+    accountSortLastLogin: "最近登入",
+    accountSortName: "帳號名稱",
+    accountSortProvider: "供應商",
+    accountSortGrade: "檢測評級",
+    accountFilterLabel: "狀態",
+    accountFilterAll: "全部",
+    accountFilterSignedIn: "已登入",
+    accountFilterSignedOut: "已登出",
+    accountFilterCount: "顯示 {shown} / 共 {total}",
+    accountEmpty: "還沒有帳號",
+    accountEmptyCopy: "透過乾淨登入登入之後，帳號會顯示在這裡。",
+    accountNoMatch: "沒有符合篩選條件的帳號。",
+    accountColName: "帳號",
+    accountColFingerprint: "指紋",
+    accountColLastLogin: "上次登入",
+    accountColCheck: "身分檢測",
+    accountColStatus: "狀態",
+    accountColActions: "操作",
+    accountUnverified: "未驗證流程",
+    accountUnverifiedTitle: "這個帳號來自一條還沒有在乾淨登入中驗證過的登入流程。",
+    accountSignedIn: "已登入",
+    accountSignedOut: "已登出 · 保留身分",
+    accountCheckNone: "未檢測",
+    accountChecking: "檢測中…",
+    accountFingerprintPinned: "固定於 {time}",
+    accountFingerprintNone: "沒有固定指紋",
+    accountExitDirect: "直連",
+    accountLastLoginAt: "{time} · {exit}",
+    accountCheckExposure: "{count} 處可能暴露你",
+    accountRelogin: "重新登入",
+    accountReloginTitle: "沿用這個帳號保留的指紋重新登入，不會產生新的身分。",
+    accountCheck: "檢測",
+    accountDetail: "詳情",
+    accountClear: "清除身分",
+    accountCheckBusy: "已有檢測在進行。",
+    gradeLegendLabel: "判定",
+    gradeA: "乾淨 · 可以用",
+    gradeB: "可用 · 有痕跡",
+    gradeC: "建議換出口",
+    gradeD: "不要用這個出口",
+    gradeDisclaimer: "這是第三方站點 who.1ms.dog 的判定，不等於供應商風控結論，也不是我們自建的指紋評分。",
+    gradeMeaningA: "乾淨：出口和身分對得上，可以拿去用。",
+    gradeMeaningB: "可用：站點看得出你走了一條代理，但沒有自相矛盾。",
+    gradeMeaningC: "建議換出口：身分和出口對不上，換一個出口再測。",
+    gradeMeaningD: "不要用這個出口：多處矛盾，先換成別的出口。",
+    accountDetailTitle: "帳號",
+    accountDetailProvider: "供應商",
+    accountDetailKey: "帳號金鑰",
+    accountDetailFingerprint: "指紋 id",
+    accountDetailPinnedAt: "固定時間",
+    accountDetailLastLoginExit: "上次登入出口",
+    accountDetailStatus: "狀態",
+    accountDetailNote: "備註",
+    accountDetailNoteSave: "儲存備註",
+    accountDetailNoteSaving: "儲存中…",
+    accountDetailNoteHint: "備註只保存在這個帳號上，最多 200 個字元。",
+    accountDetailNoteEmpty: "還沒有備註。",
+    accountDetailSaved: "備註已儲存。",
+    accountDetailNoteTooLong: "備註過長。",
+    accountDetailSigninHint: "該帳號仍在登入狀態。先在 magpie 中登出，這裡才能清除它的身分。",
+    accountDetailRetiredHint: "指紋與該帳號的設定檔同生共死：只要不「清除身分」，再次登入會重用同一個指紋。",
+    accountDetailHistoryTitle: "檢測歷史",
+    accountDetailHistoryEmpty: "還沒有檢測過。檢測會用這個身分打開 who.1ms.dog。",
+    accountDetailHistoryLine: "{grade} · {time} · {exit} · {exposure} 處暴露",
+    accountDetailDismiss: "關閉",
+    accountCheckFailedExit: "出口：{exit}",
+    accountCheckTitle: "身分檢測",
+    accountCheckCopy: "會用這個帳號自己的瀏覽器指紋打開 who.1ms.dog，並讀回站點的判定。",
+    accountCheckProxyLabel: "代理 IP",
+    accountCheckProxyDirect: "不使用代理（直連）",
+    accountCheckProxyHint: "登入時用的出口不會被記錄；這次檢測看的是你在這裡選的出口。",
+    accountCheckTargetLabel: "目標站點",
+    accountCheckEtaLabel: "預計用時",
+    accountCheckEtaValue: "以站點實際回傳為準",
+    accountCheckExitLabel: "出口",
+    accountCheckTimeLabel: "時間",
+    accountCheckGradeLabel: "評級",
+    accountCheckIdentityLabel: "使用身分",
+    accountCheckNote: "該站點不允許被其他頁面嵌入。乾淨登入會開啟一個隔離視窗，讀完判定就關掉。",
+    accountCheckStart: "開始檢測",
+    accountCheckRunningOpening: "正在開啟隔離瀏覽器…",
+    accountCheckRunningReading: "正在讀取站點的判定…",
+    accountCheckElapsed: "{seconds} 秒",
+    accountCheckCancel: "取消檢測",
+    accountCheckCancelled: "檢測已取消，本次沒有產生判定。",
+    accountCheckSummary: "who.1ms.dog 判定 · 出口 {exit} · {time}",
+    accountCheckNoExposure: "站點沒有標出任何矛盾",
+    accountCheckResultNote: "判定只記在這個帳號上，不會上報到別處。",
+    accountCheckAgain: "重新檢測",
+    accountCheckReexit: "換出口重測",
+    accountCheckDetails: "詳情",
+    accountCheckFailedTitle: "這次檢測沒有完成",
+    accountCheckFailedDetail: "{reason}（出口：{exit}）",
+    accountCheckFailedNoVerdict: "這次檢測沒有完成，所以沒有產生新判定。",
+    accountCheckFailedKeepPrevious: "上一次的判定仍然是 {grade} · {time}（{exit}），沒有變化。",
+    accountCheckFailedNoPrevious: "這個帳號還沒有任何判定記錄。",
+    accountCheckRetry: "重試",
+    accountCheckChangeExit: "換個出口",
+    accountCheckDismiss: "關閉",
+    checkErrorBrowserMissing: "隔離瀏覽器未安裝，請先準備登入瀏覽器。",
+    checkErrorExecutableMissing: "瀏覽器執行檔缺失，請重新準備登入瀏覽器。",
+    checkErrorIdentityMissing: "這個帳號還沒有固定指紋，檢測無法開始。",
+    checkErrorLaunchFailed: "隔離瀏覽器沒起來，通常是安裝目錄被佔用或檔案缺失。",
+    checkErrorLaunchTimeout: "隔離瀏覽器啟動逾時。",
+    checkErrorPageTimeout: "who.1ms.dog 沒有在限定時間內給出判定。可能是站點慢，也可能是出口把請求吞了。",
+    checkErrorVerdictMissing: "who.1ms.dog 這次沒有給出判定。",
+    checkErrorCancelled: "檢測已取消，因此沒有產生判定。",
+    checkErrorProxyNotFound: "所選代理已不存在，請換一個出口。",
+    checkErrorAccountNotFound: "這個帳號已不存在，請重新整理清單。",
+    checkErrorCheckBusy: "已有檢測在進行，請等它結束。",
+    checkErrorInternal: "本機服務無法完成這次檢測。",
+    checkErrorUnknown: "檢測在產生判定之前中止了。",
+    errorInvalidNote: "備註無效。",
+    toastNoteSaved: "備註已儲存。",
+    toastCheckDone: "檢測完成 · 評級 {grade}。",
+    toastCheckCancelled: "檢測已取消。",
+    toastRefreshed: "帳號清單已重新整理。",
   },
   ja: {
     title: "クリーンログイン",
@@ -912,6 +1298,132 @@ const messages = {
     testSocksHost: "SOCKS5 プロキシがテスト先に到達できません。",
     testSocksGeneral: "SOCKS5 プロキシが接続できません。",
     testUnknown: "このプロキシ経由でテスト先に到達できません。",
+    accounts: "アカウント",
+    accountsTitle: "アカウント",
+    accountsCopy: "クリーンログインでログインした各アカウント、固定されたブラウザー指紋、who.1ms.dog による判定を表示します。",
+    accountsRefresh: "再読み込み",
+    accountsRefreshing: "再読み込み中…",
+    accountsRefreshed: "{count} 件のアカウントを読み込みました。",
+    accountSearchLabel: "アカウントを検索",
+    accountSearchPlaceholder: "アカウントを検索",
+    accountSortLabel: "並び替え",
+    accountSortLastLogin: "最近のログイン",
+    accountSortName: "アカウント名",
+    accountSortProvider: "プロバイダー",
+    accountSortGrade: "判定ランク",
+    accountFilterLabel: "状態",
+    accountFilterAll: "すべて",
+    accountFilterSignedIn: "ログイン中",
+    accountFilterSignedOut: "ログアウト済み",
+    accountFilterCount: "{shown} / {total} 件を表示",
+    accountEmpty: "アカウントがありません",
+    accountEmptyCopy: "クリーンログインでログインすると、ここにアカウントが表示されます。",
+    accountNoMatch: "条件に一致するアカウントがありません。",
+    accountColName: "アカウント",
+    accountColFingerprint: "指紋",
+    accountColLastLogin: "最終ログイン",
+    accountColCheck: "身元判定",
+    accountColStatus: "状態",
+    accountColActions: "操作",
+    accountUnverified: "未検証のフロー",
+    accountUnverifiedTitle: "このアカウントはクリーンログインで未検証のログインフローから作成されました。",
+    accountSignedIn: "ログイン中",
+    accountSignedOut: "ログアウト済み · 身分を保持",
+    accountCheckNone: "未判定",
+    accountChecking: "判定中…",
+    accountFingerprintPinned: "{time} に固定",
+    accountFingerprintNone: "固定された指紋がありません",
+    accountExitDirect: "直接接続",
+    accountLastLoginAt: "{time} · {exit}",
+    accountCheckExposure: "{count} 箇所で情報が漏れる可能性",
+    accountRelogin: "再ログイン",
+    accountReloginTitle: "このアカウントの保持された指紋を再利用し、新しい身分は生成しません。",
+    accountCheck: "判定",
+    accountDetail: "詳細",
+    accountClear: "身分を消去",
+    accountCheckBusy: "すでに判定が進行中です。",
+    gradeLegendLabel: "判定",
+    gradeA: "クリーン · 使用可",
+    gradeB: "使用可 · 痕跡あり",
+    gradeC: "出口の変更を推奨",
+    gradeD: "この出口は使わないでください",
+    gradeDisclaimer: "これはサードパーティサイト who.1ms.dog の判定であり、プロバイダーのリスク管理結論でも、独自の指紋スコアでもありません。",
+    gradeMeaningA: "クリーン：出口と身分が一致しており、使用できます。",
+    gradeMeaningB: "使用可：プロキシは見えていますが、矛盾はありません。",
+    gradeMeaningC: "出口の変更を推奨：身分と出口が一致しません。別の出口で再判定してください。",
+    gradeMeaningD: "この出口は使わないでください：複数の矛盾があります。まず出口を変更してください。",
+    accountDetailTitle: "アカウント",
+    accountDetailProvider: "プロバイダー",
+    accountDetailKey: "アカウントキー",
+    accountDetailFingerprint: "指紋 ID",
+    accountDetailPinnedAt: "固定日時",
+    accountDetailLastLoginExit: "最終ログインの出口",
+    accountDetailStatus: "状態",
+    accountDetailNote: "メモ",
+    accountDetailNoteSave: "メモを保存",
+    accountDetailNoteSaving: "保存中…",
+    accountDetailNoteHint: "メモはこのアカウントにのみ保存されます（最大 200 文字）。",
+    accountDetailNoteEmpty: "メモはまだありません。",
+    accountDetailSaved: "メモを保存しました。",
+    accountDetailNoteTooLong: "メモが長すぎます。",
+    accountDetailSigninHint: "このアカウントはまだログイン中です。身分を消去する前に magpie でログアウトしてください。",
+    accountDetailRetiredHint: "指紋とアカウントのプロファイルは一体です。身分を消去しない限り、再ログインでは同じ指紋が使われます。",
+    accountDetailHistoryTitle: "判定履歴",
+    accountDetailHistoryEmpty: "まだ判定していません。判定ではこの身分で who.1ms.dog を開きます。",
+    accountDetailHistoryLine: "{grade} · {time} · {exit} · {exposure} 箇所の露出",
+    accountDetailDismiss: "閉じる",
+    accountCheckFailedExit: "出口：{exit}",
+    accountCheckTitle: "身元判定",
+    accountCheckCopy: "このアカウント固有のブラウザー指紋で who.1ms.dog を開き、サイトの判定を読み取ります。",
+    accountCheckProxyLabel: "プロキシ IP",
+    accountCheckProxyDirect: "プロキシを使用しない（直接接続）",
+    accountCheckProxyHint: "ログイン時の出口は記録されません。この判定ではここで選んだ出口を使います。",
+    accountCheckTargetLabel: "対象サイト",
+    accountCheckEtaLabel: "所要時間の目安",
+    accountCheckEtaValue: "サイトの実際の応答に準じます",
+    accountCheckExitLabel: "出口",
+    accountCheckTimeLabel: "時刻",
+    accountCheckGradeLabel: "ランク",
+    accountCheckIdentityLabel: "使用する身分",
+    accountCheckNote: "このサイトは埋め込みできません。クリーンログインが隔離ウィンドウを開き、判定を読み取って閉じます。",
+    accountCheckStart: "判定を開始",
+    accountCheckRunningOpening: "隔離ブラウザーを開いています…",
+    accountCheckRunningReading: "サイトの判定を読み取っています…",
+    accountCheckElapsed: "{seconds} 秒",
+    accountCheckCancel: "判定をキャンセル",
+    accountCheckCancelled: "判定はキャンセルされました。判定結果はありません。",
+    accountCheckSummary: "who.1ms.dog の判定 · 出口 {exit} · {time}",
+    accountCheckNoExposure: "サイトは矛盾を検出しませんでした",
+    accountCheckResultNote: "判定はこのアカウントにのみ保存され、他へ送信されません。",
+    accountCheckAgain: "再判定",
+    accountCheckReexit: "別の出口で再判定",
+    accountCheckDetails: "詳細",
+    accountCheckFailedTitle: "今回の判定は完了しませんでした",
+    accountCheckFailedDetail: "{reason}（出口：{exit}）",
+    accountCheckFailedNoVerdict: "今回の判定は完了しなかったため、新しい判定は生成されませんでした。",
+    accountCheckFailedKeepPrevious: "前回の判定は {grade} · {time}（{exit}）のままです。変更はありません。",
+    accountCheckFailedNoPrevious: "このアカウントには判定記録がまだありません。",
+    accountCheckRetry: "再試行",
+    accountCheckChangeExit: "別の出口を選ぶ",
+    accountCheckDismiss: "閉じる",
+    checkErrorBrowserMissing: "隔離ブラウザーがありません。先にログイン用ブラウザーを準備してください。",
+    checkErrorExecutableMissing: "ブラウザーの実行ファイルがありません。ログイン用ブラウザーを再準備してください。",
+    checkErrorIdentityMissing: "このアカウントには固定された指紋がないため、判定を開始できません。",
+    checkErrorLaunchFailed: "隔離ブラウザーが起動しませんでした。インストール先が使用中かファイルが不足している可能性があります。",
+    checkErrorLaunchTimeout: "隔離ブラウザーの起動がタイムアウトしました。",
+    checkErrorPageTimeout: "who.1ms.dog が時間内に判定を返しませんでした。サイトが遅いか、出口がリクエストを失った可能性があります。",
+    checkErrorVerdictMissing: "who.1ms.dog から今回は判定を取得できませんでした。",
+    checkErrorCancelled: "判定はキャンセルされたため、判定結果はありません。",
+    checkErrorProxyNotFound: "選択したプロキシは存在しません。別の出口を選んでください。",
+    checkErrorAccountNotFound: "このアカウントは存在しません。一覧を再読み込みしてください。",
+    checkErrorCheckBusy: "すでに判定が進行中です。完了までお待ちください。",
+    checkErrorInternal: "ローカルサービスがこの判定を完了できませんでした。",
+    checkErrorUnknown: "判定結果が出る前に処理が停止しました。",
+    errorInvalidNote: "メモが無効です。",
+    toastNoteSaved: "メモを保存しました。",
+    toastCheckDone: "判定完了 · ランク {grade}。",
+    toastCheckCancelled: "判定をキャンセルしました。",
+    toastRefreshed: "アカウント一覧を更新しました。",
   },
 };
 
@@ -977,6 +1489,23 @@ let accountIdentitiesError = "";
 let accountIdentitiesNotice = "";
 let accountIdentitiesLoading = false;
 let clearingIdentityKey = "";
+// The accounts table is the same unified GET /api/accounts list as the
+// identities card; it is never seeded with local rows. Its view state lives
+// only in this document, like the proxy filters.
+let providerCatalog = [];
+let accountQuery = "";
+let accountFilter = "all";
+let accountSort = "lastLogin";
+let accountsNotice = "";
+let checkProxies = [];
+let accountCheckContext = null;
+let accountCheckTimer = null;
+let accountCheckTicker = null;
+let accountDetailContext = null;
+let noteSaving = false;
+const ACCOUNT_CHECK_POLL_MS = 800;
+const ACCOUNT_CHECK_VISUAL_MS = 90_000;
+const NOTE_MAX_LENGTH = 200;
 
 const errorKeys = {
   signed_in: "errorAccountSignedIn",
@@ -1131,16 +1660,85 @@ function applyText() {
   byId("identities-title").textContent = text.identitiesTitle;
   byId("identities-copy").textContent = text.identitiesCopy;
   byId("identities-retry").textContent = text.identitiesRetry;
+  // --- accounts tab / panel ---
+  byId("tab-accounts-label").textContent = text.accounts;
+  byId("accounts-title").textContent = text.accountsTitle;
+  byId("accounts-copy").textContent = text.accountsCopy;
+  byId("accounts-refresh").textContent = text.accountsRefresh;
+  byId("account-search-label").textContent = text.accountSearchLabel;
+  byId("account-search").placeholder = text.accountSearchPlaceholder;
+  byId("account-search").setAttribute("aria-label", text.accountSearchLabel);
+  byId("account-sort-label").textContent = text.accountSortLabel;
+  byId("account-sort-last-login").textContent = text.accountSortLastLogin;
+  byId("account-sort-name").textContent = text.accountSortName;
+  byId("account-sort-provider").textContent = text.accountSortProvider;
+  byId("account-sort-grade").textContent = text.accountSortGrade;
+  byId("account-filter-label").textContent = text.accountFilterLabel;
+  byId("account-filter-all-label").textContent = text.accountFilterAll;
+  byId("account-filter-signed-in-label").textContent = text.accountFilterSignedIn;
+  byId("account-filter-signed-out-label").textContent = text.accountFilterSignedOut;
+  byId("accounts-empty-title").textContent = text.accountEmpty;
+  byId("accounts-empty-copy").textContent = text.accountEmptyCopy;
+  for (const [id, label] of [
+    ["account-col-name", text.accountColName],
+    ["account-col-fingerprint", text.accountColFingerprint],
+    ["account-col-last-login", text.accountColLastLogin],
+    ["account-col-check", text.accountColCheck],
+    ["account-col-status", text.accountColStatus],
+    ["account-col-actions", text.accountColActions],
+  ]) {
+    byId(id).textContent = label;
+    byId(id).setAttribute("data-label", label);
+  }
+  byId("grade-legend-label").textContent = text.gradeLegendLabel;
+  byId("grade-a").textContent = text.gradeA;
+  byId("grade-b").textContent = text.gradeB;
+  byId("grade-c").textContent = text.gradeC;
+  byId("grade-d").textContent = text.gradeD;
+  byId("grade-disclaimer").textContent = text.gradeDisclaimer;
+  // --- account detail dialog ---
+  byId("account-detail-note-label").textContent = text.accountDetailNote;
+  byId("account-detail-note-hint").textContent = text.accountDetailNoteHint;
+  byId("account-detail-history-title").textContent = text.accountDetailHistoryTitle;
+  byId("account-detail-dismiss").textContent = text.accountDetailDismiss;
+  byId("account-detail-check").textContent = text.accountCheckStart;
+  byId("account-detail-note-save").textContent = text.accountDetailNoteSave;
+  byId("account-detail-close").setAttribute("aria-label", text.accountDetailDismiss);
+  // --- account check dialog ---
+  byId("account-check-title").textContent = text.accountCheckTitle;
+  byId("account-check-close").setAttribute("aria-label", text.accountCheckDismiss);
+  byId("account-check-proxy-label").textContent = text.accountCheckProxyLabel;
+  byId("account-check-proxy-hint").textContent = text.accountCheckProxyHint;
+  byId("account-check-target-label").textContent = text.accountCheckTargetLabel;
+  byId("account-check-eta-label").textContent = text.accountCheckEtaLabel;
+  byId("account-check-eta-value").textContent = text.accountCheckEtaValue;
+  byId("account-check-identity-label").textContent = text.accountCheckIdentityLabel;
+  byId("account-check-note").textContent = text.accountCheckNote;
+  byId("account-check-grade-label").textContent = text.accountCheckGradeLabel;
+  byId("account-check-exit-label").textContent = text.accountCheckExitLabel;
+  byId("account-check-time-label").textContent = text.accountCheckTimeLabel;
+  byId("account-check-result-note").textContent = text.accountCheckResultNote;
+  byId("account-check-start").textContent = text.accountCheckStart;
+  byId("account-check-again").textContent = text.accountCheckAgain;
+  byId("account-check-reexit").textContent = text.accountCheckReexit;
+  byId("account-check-details").textContent = text.accountCheckDetails;
+  byId("account-check-retry").textContent = text.accountCheckRetry;
+  byId("account-check-change-exit").textContent = text.accountCheckChangeExit;
+  byId("account-check-cancel").textContent = text.accountCheckCancel;
+  byId("account-check-dismiss").textContent = text.accountCheckDismiss;
 }
 
 function selectTab(name) {
-  const providers = name !== "proxies";
-  byId("tab-providers").classList.toggle("is-active", providers);
-  byId("tab-proxies").classList.toggle("is-active", !providers);
-  byId("tab-providers").setAttribute("aria-selected", String(providers));
-  byId("tab-proxies").setAttribute("aria-selected", String(!providers));
-  byId("panel-providers").hidden = !providers;
-  byId("panel-proxies").hidden = providers;
+  for (const [key, tabId, panelId] of [
+    ["providers", "tab-providers", "panel-providers"],
+    ["proxies", "tab-proxies", "panel-proxies"],
+    ["accounts", "tab-accounts", "panel-accounts"],
+  ]) {
+    const active = key === name;
+    byId(tabId).classList.toggle("is-active", active);
+    byId(tabId).setAttribute("aria-selected", String(active));
+    byId(panelId).hidden = !active;
+  }
 }
 
 function setServiceState(state, label) {
@@ -1899,6 +2497,7 @@ async function loadAccountIdentities() {
   } finally {
     accountIdentitiesLoading = false;
     renderIdentities();
+    renderAccounts();
   }
 }
 
@@ -2129,12 +2728,26 @@ function selectedSignInAccount() {
   return typeof value === "string" && value ? value : null;
 }
 
-function openSignInDialog(provider) {
+function openSignInDialog(provider, options = {}) {
   const dialog = byId("signin-dialog");
+  // A signed-out account row reuses the same dialog. The provider comes from
+  // the real bootstrap list; if it is not listed any more the account still
+  // carries a real provider id and the service decides whether it can sign in.
+  if (typeof provider === "string") {
+    const id = provider;
+    provider = accountProviderEntry(id) || {
+      signInProvider: id,
+      name: id,
+      signInMethods: [],
+      browserMethod: true,
+      signableMethod: true,
+    };
+  }
   if (dialog.open || !providerCanSignIn(provider)) return;
   signInContext = {
     provider: provider.signInProvider,
     name: provider.name || provider.signInProvider,
+    preselectAccountKey: typeof options.accountKey === "string" ? options.accountKey : "",
     flow: null,
     busy: false,
   };
@@ -2142,6 +2755,7 @@ function openSignInDialog(provider) {
   renderSignInMethods(provider);
   renderSignInAccounts(provider);
   renderSignInProxies();
+  renderSignInPreselection();
   byId("signin-proxy").value = "";
   setSignInNotice("");
   setSignInError("");
@@ -2152,8 +2766,32 @@ function openSignInDialog(provider) {
   // The identity list is re-read when the dialog opens: an identity may have
   // been retired (or cleared) since the page loaded.
   loadAccountIdentities().then(() => {
-    if (signInContext) renderSignInAccounts(signInContext.provider);
+    if (!signInContext) return;
+    renderSignInAccounts(signInContext.provider);
+    renderSignInPreselection();
   });
+}
+
+// The account row's "sign in again" action preselects the kept identity, so
+// the next sign-in reuses that fingerprint instead of drawing a new one.
+function renderSignInPreselection() {
+  const key = signInContext?.preselectAccountKey || "";
+  if (!key) return;
+  const field = byId("signin-account-field");
+  const select = byId("signin-account");
+  const hint = byId("signin-account-hint");
+  if (![...select.options].some((option) => option.value === key)) {
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = accountLabel(
+      accountIdentities.find((item) => item?.key === key) || { key },
+    );
+    select.append(option);
+  }
+  select.value = key;
+  field.hidden = false;
+  hint.hidden = false;
+  hint.textContent = text.signInAccountHint;
 }
 
 async function startSignIn() {
@@ -2417,6 +3055,7 @@ function renderProviderSources(view) {
 }
 
 function renderProviders(items) {
+  providerCatalog = Array.isArray(items) ? items : [];
   const list = byId("providers-list");
   const empty = byId("providers-empty");
   byId("provider-count").textContent = String(items.length);
@@ -2435,6 +3074,7 @@ function render(data) {
     ? view.providers
     : Array.isArray(data?.providers) ? data.providers : [];
   proxies = Array.isArray(data?.proxies) ? data.proxies : [];
+  checkProxies = proxies;
   renderProviders(providers);
   renderProviderSources(view);
   renderProxies();
@@ -3022,6 +3662,689 @@ async function confirmDelete() {
   }
 }
 
+// --- accounts page -------------------------------------------------------
+//
+// Everything in the accounts table comes from GET /api/accounts — the same
+// unified list the sign-in dialog uses. There is no local seed and no local
+// verdict: a failed or cancelled check writes nothing, so the page re-reads
+// the list after every settled job and renders exactly what the service says.
+
+function accountProviderEntry(provider) {
+  return providerCatalog.find(
+    (item) => item?.signInProvider === provider || item?.id === provider,
+  ) || null;
+}
+
+function accountDisplay(account) {
+  const view = accountView(account);
+  const entry = accountProviderEntry(view.provider);
+  return accountView({ ...account, providerLabel: entry?.name || view.providerLabel || view.provider });
+}
+
+// An account is flagged when the provider's own sign-in capability has not
+// been verified yet (or the ledger itself says so). No hard-coded account is
+// ever marked: both sources are real API data.
+function accountUnverified(account) {
+  if (account?.unverified === true) return true;
+  const view = accountView(account);
+  const entry = accountProviderEntry(view.provider);
+  if (!entry) return false;
+  return providerStatusView(entry, text).state !== "ready";
+}
+
+function gradeTone(grade) {
+  if (grade === "A" || grade === "B") return "good";
+  if (grade === "C") return "warn";
+  if (grade === "D") return "bad";
+  return "none";
+}
+
+function accountCell(className, label) {
+  const cell = document.createElement("div");
+  cell.className = className;
+  // The mobile card layout shows this as a field label; the desktop grid
+  // hides the ::before rule.
+  cell.setAttribute("data-label", label);
+  return cell;
+}
+
+function accountRunningFor(provider, key) {
+  return Boolean(
+    accountCheckContext?.active &&
+    accountCheckContext.provider === provider &&
+    accountCheckContext.key === key,
+  );
+}
+
+function accountRow(account) {
+  const view = accountDisplay(account);
+  const row = document.createElement("div");
+  row.className = "proxy-row account-row";
+  row.dataset.accountKey = view.key;
+  row.dataset.provider = view.provider;
+
+  const name = accountCell("proxy-name account-cell-name", text.accountColName);
+  const line = document.createElement("div");
+  line.className = "account-name-line";
+  const strong = document.createElement("strong");
+  strong.textContent = view.name;
+  line.append(strong);
+  if (accountUnverified(account)) {
+    const tag = document.createElement("span");
+    tag.className = "unverified-tag";
+    tag.textContent = text.accountUnverified;
+    tag.title = text.accountUnverifiedTitle;
+    line.append(tag);
+  }
+  const small = document.createElement("small");
+  small.textContent = `${view.providerLabel} · ${view.key}`;
+  name.append(line, small);
+
+  const fingerprint = accountCell(
+    "proxy-address account-fingerprint account-cell-fingerprint",
+    text.accountColFingerprint,
+  );
+  fingerprint.append(document.createTextNode(view.fingerprint.id || text.accountFingerprintNone));
+  const pinned = document.createElement("small");
+  pinned.textContent = text.accountFingerprintPinned
+    .replace("{time}", formatTime(view.fingerprint.pinnedAt));
+  fingerprint.append(pinned);
+
+  const lastLogin = accountCell("proxy-checked account-cell-last-login", text.accountColLastLogin);
+  lastLogin.textContent = text.accountLastLoginAt
+    .replace("{time}", formatTime(view.lastLogin?.at || view.signedInAt))
+    .replace("{exit}", formatExit(view.lastLogin, text.accountExitDirect));
+
+  const checkCell = accountCell("proxy-score-cell account-cell-check", text.accountColCheck);
+  if (accountRunningFor(view.provider, view.key)) {
+    const running = document.createElement("span");
+    running.className = "proxy-score is-active";
+    running.textContent = text.accountChecking;
+    checkCell.append(running);
+  } else if (!view.lastCheck) {
+    const none = document.createElement("span");
+    none.className = "proxy-score none";
+    none.textContent = text.accountCheckNone;
+    checkCell.append(none);
+  } else {
+    const grade = document.createElement("span");
+    grade.className = `proxy-score ${gradeTone(view.lastCheck.grade)}`;
+    grade.textContent = String(view.lastCheck.grade || "—");
+    const when = document.createElement("small");
+    when.className = "proxy-score-label";
+    when.textContent = formatTime(view.lastCheck.at);
+    checkCell.append(grade, when);
+  }
+
+  const statusCell = accountCell("proxy-status-cell account-cell-status", text.accountColStatus);
+  const status = document.createElement("span");
+  status.className = `proxy-status${view.signedIn ? " ok" : ""}`;
+  status.textContent = view.signedIn ? text.accountSignedIn : text.accountSignedOut;
+  statusCell.append(status);
+
+  const actions = accountCell("proxy-actions account-cell-actions", text.accountColActions);
+  const busy = Boolean(accountCheckContext?.active);
+  if (!view.signedIn) {
+    const provider = view.provider;
+    const relogin = miniButton(text.accountRelogin, () => {
+      openSignInDialog(provider, { accountKey: view.key });
+    });
+    relogin.className = "mini-button primary";
+    relogin.title = text.accountReloginTitle;
+    actions.append(relogin);
+  }
+  const checkButton = miniButton(text.accountCheck, () => openAccountCheck(account));
+  checkButton.disabled = busy;
+  if (busy) checkButton.title = text.accountCheckBusy;
+  actions.append(checkButton);
+  actions.append(miniButton(text.accountDetail, () => openAccountDetail(account)));
+  if (!view.signedIn) {
+    actions.append(miniButton(text.accountClear, () => askClearIdentity(account), true));
+  }
+
+  row.append(name, fingerprint, lastLogin, checkCell, statusCell, actions);
+  return row;
+}
+
+function renderAccounts() {
+  const list = byId("accounts-list");
+  const table = byId("account-table");
+  const empty = byId("accounts-empty");
+  const notice = byId("accounts-notice");
+  const total = accountIdentities.length;
+  const signedIn = accountIdentities.filter((item) => item?.signedIn === true).length;
+  byId("account-count").textContent = String(total);
+  byId("account-filter-all-count").textContent = String(total);
+  byId("account-filter-signed-in-count").textContent = String(signedIn);
+  byId("account-filter-signed-out-count").textContent = String(total - signedIn);
+  for (const [id, value] of [
+    ["account-filter-all", "all"],
+    ["account-filter-signed-in", "signedIn"],
+    ["account-filter-signed-out", "signedOut"],
+  ]) {
+    const chip = byId(id);
+    const active = accountFilter === value;
+    chip.classList.toggle("is-active", active);
+    chip.setAttribute("aria-pressed", String(active));
+  }
+  const visible = sortAccounts(
+    filterAccounts(accountIdentities, { query: accountQuery, filter: accountFilter }),
+    accountSort,
+  );
+  byId("account-filter-count").textContent = text.accountFilterCount
+    .replace("{shown}", String(visible.length))
+    .replace("{total}", String(total));
+  const message = accountsNotice || accountIdentitiesError;
+  notice.textContent = message || "";
+  notice.hidden = !message;
+  notice.dataset.kind = accountIdentitiesError ? "error" : "";
+  empty.hidden = total > 0;
+  table.hidden = total === 0;
+  list.textContent = "";
+  if (total === 0) return;
+  if (!visible.length) {
+    const note = document.createElement("p");
+    note.className = "proxy-filter-empty";
+    note.textContent = text.accountNoMatch;
+    list.append(note);
+    return;
+  }
+  for (const account of visible) list.append(accountRow(account));
+}
+
+function setAccountFilter(value) {
+  accountFilter = value;
+  renderAccounts();
+}
+
+async function refreshAccounts() {
+  await loadAccountIdentities();
+  if (!accountIdentitiesError) {
+    accountsNotice = text.accountsRefreshed
+      .replace("{count}", String(accountIdentities.length));
+    renderAccounts();
+    toast(text.toastRefreshed);
+  }
+}
+
+function toast(message) {
+  const wrap = byId("toasts");
+  const node = document.createElement("div");
+  node.className = "toast";
+  node.textContent = message;
+  wrap.append(node);
+  setTimeout(() => node.remove(), 2800);
+}
+
+// --- account detail dialog ------------------------------------------------
+
+function setDetailError(message) {
+  const node = byId("account-detail-error");
+  node.textContent = message || "";
+  node.hidden = !message;
+}
+
+function setDetailStatus(message) {
+  const node = byId("account-detail-note-status");
+  node.textContent = message || "";
+  node.hidden = !message;
+}
+
+function renderDetailFacts(view) {
+  const facts = byId("account-detail-facts");
+  facts.textContent = "";
+  for (const [label, value] of [
+    [text.accountDetailProvider, view.providerLabel],
+    [text.accountDetailKey, view.key],
+    [text.accountDetailFingerprint, view.fingerprint.id || text.accountFingerprintNone],
+    [text.accountDetailPinnedAt, formatTime(view.fingerprint.pinnedAt)],
+    [text.accountDetailLastLoginExit, formatExit(view.lastLogin, text.accountExitDirect)],
+    [text.accountDetailStatus, view.signedIn ? text.accountSignedIn : text.accountSignedOut],
+  ]) {
+    const wrap = document.createElement("div");
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    wrap.append(dt, dd);
+    facts.append(wrap);
+  }
+}
+
+function renderDetailHistory(checks) {
+  const list = byId("account-detail-history");
+  list.textContent = "";
+  if (!checks.length) {
+    const none = document.createElement("p");
+    none.className = "identity-empty";
+    none.textContent = text.accountDetailHistoryEmpty;
+    list.append(none);
+    return;
+  }
+  for (const check of checks) {
+    const row = document.createElement("div");
+    row.className = "identity-row";
+    const grade = document.createElement("span");
+    grade.className = `proxy-score ${gradeTone(check?.grade)}`;
+    grade.textContent = String(check?.grade || "—");
+    const meta = document.createElement("span");
+    meta.className = "identity-meta";
+    meta.textContent = text.accountDetailHistoryLine
+      .replace("{grade}", String(check?.grade || "—"))
+      .replace("{time}", formatTime(check?.at))
+      .replace("{exit}", formatExit(check, text.accountExitDirect))
+      .replace("{exposure}", String(check?.exposure ?? 0));
+    row.append(grade, meta);
+    list.append(row);
+  }
+}
+
+function openAccountDetail(account) {
+  const dialog = byId("account-detail-dialog");
+  const view = accountDisplay(account);
+  accountDetailContext = { provider: view.provider, key: view.key, account };
+  byId("account-detail-title").textContent = view.name;
+  byId("account-detail-copy").textContent = `${view.providerLabel} · ${view.key}`;
+  renderDetailFacts(view);
+  byId("account-detail-note").value = view.note;
+  setDetailError("");
+  setDetailStatus(view.signedIn ? text.accountDetailSigninHint : text.accountDetailRetiredHint);
+  renderDetailHistory(view.checks);
+  if (!dialog.open) dialog.showModal();
+}
+
+function closeAccountDetail() {
+  const dialog = byId("account-detail-dialog");
+  if (dialog.open) dialog.close();
+}
+
+function cleanupAccountDetail() {
+  accountDetailContext = null;
+  setDetailError("");
+}
+
+async function saveAccountNote() {
+  const context = accountDetailContext;
+  if (!context || noteSaving) return;
+  const note = byId("account-detail-note").value;
+  if (note.length > NOTE_MAX_LENGTH) {
+    setDetailError(text.accountDetailNoteTooLong);
+    return;
+  }
+  noteSaving = true;
+  byId("account-detail-note-save").disabled = true;
+  byId("account-detail-note-save").textContent = text.accountDetailNoteSaving;
+  setDetailError("");
+  try {
+    const data = await api(accountIdentityPath(context.provider, context.key), {
+      method: "PATCH",
+      body: { note },
+    });
+    if (accountDetailContext !== context) return;
+    // Only the row the service returned is applied; never a locally invented
+    // account object. The PATCH response is the source of truth for the note.
+    if (data?.account) {
+      const index = accountIdentities.findIndex(
+        (item) => item?.provider === context.provider && item?.key === context.key,
+      );
+      if (index >= 0) accountIdentities[index] = data.account;
+      context.account = data.account;
+      renderDetailFacts(accountDisplay(data.account));
+      renderDetailHistory(accountView(data.account).checks);
+    }
+    setDetailStatus(text.accountDetailSaved);
+    toast(text.toastNoteSaved);
+    renderAccounts();
+  } catch (error) {
+    if (accountDetailContext === context) setDetailError(serverErrorText(error));
+  } finally {
+    noteSaving = false;
+    byId("account-detail-note-save").disabled = false;
+    byId("account-detail-note-save").textContent = text.accountDetailNoteSave;
+  }
+}
+
+function openCheckFromDetail() {
+  const context = accountDetailContext;
+  if (!context) return;
+  const account = accountIdentities.find(
+    (item) => item?.provider === context.provider && item?.key === context.key,
+  ) || context.account;
+  byId("account-detail-dialog").close();
+  openAccountCheck(account);
+}
+
+// --- account check dialog -------------------------------------------------
+
+const checkErrorKeys = {
+  browser_missing: "checkErrorBrowserMissing",
+  executable_missing: "checkErrorExecutableMissing",
+  identity_missing: "checkErrorIdentityMissing",
+  launch_failed: "checkErrorLaunchFailed",
+  launch_timeout: "checkErrorLaunchTimeout",
+  page_timeout: "checkErrorPageTimeout",
+  verdict_missing: "checkErrorVerdictMissing",
+  cancelled: "checkErrorCancelled",
+  proxy_not_found: "checkErrorProxyNotFound",
+  account_not_found: "checkErrorAccountNotFound",
+  check_busy: "checkErrorCheckBusy",
+  internal: "checkErrorInternal",
+};
+
+function checkReason(job) {
+  const key = checkErrorKeys[String(job?.errorCode || "")];
+  if (key && text[key]) return text[key];
+  if (job?.error) return String(job.error);
+  return text.checkErrorUnknown;
+}
+
+function setCheckError(message) {
+  const node = byId("account-check-error");
+  node.textContent = message || "";
+  node.hidden = !message;
+}
+
+function setCheckView(view) {
+  byId("account-check-setup").hidden = view !== "setup";
+  byId("account-check-running").hidden = view !== "running";
+  byId("account-check-result").hidden = view !== "result";
+  byId("account-check-failed").hidden = view !== "failed";
+  byId("account-check-dismiss").hidden = view === "running";
+  byId("account-check-start").hidden = view !== "setup";
+  byId("account-check-again").hidden = view !== "result";
+  byId("account-check-details").hidden = view !== "result";
+  byId("account-check-reexit").hidden = view !== "result";
+  byId("account-check-cancel").hidden = view !== "running";
+  byId("account-check-retry").hidden = view !== "failed";
+  byId("account-check-change-exit").hidden = view !== "failed";
+}
+
+function stopCheckPolling() {
+  if (accountCheckTimer) {
+    clearTimeout(accountCheckTimer);
+    accountCheckTimer = null;
+  }
+}
+
+function startCheckPolling() {
+  stopCheckPolling();
+  accountCheckTimer = setTimeout(pollAccountCheck, ACCOUNT_CHECK_POLL_MS);
+}
+
+function stopCheckTicker() {
+  if (accountCheckTicker) {
+    clearInterval(accountCheckTicker);
+    accountCheckTicker = null;
+  }
+}
+
+function renderCheckElapsed() {
+  const context = accountCheckContext;
+  if (!context) return;
+  const elapsed = Math.max(0, Date.now() - context.startedAt);
+  const ratio = Math.min(0.94, elapsed / ACCOUNT_CHECK_VISUAL_MS);
+  byId("account-check-progress-bar").style.width = `${Math.round(ratio * 100)}%`;
+  byId("account-check-progress-text").textContent = text.accountCheckElapsed
+    .replace("{seconds}", String(Math.floor(elapsed / 1000)));
+  const state = context.job?.state || "launching";
+  byId("account-check-running-state").textContent =
+    state === "checking" ? text.accountCheckRunningReading : text.accountCheckRunningOpening;
+}
+
+function startCheckTicker() {
+  stopCheckTicker();
+  accountCheckTicker = setInterval(renderCheckElapsed, 250);
+}
+
+function renderCheckProxies(selectedId = "") {
+  const select = byId("account-check-proxy");
+  const previous = selectedId || select.value;
+  select.textContent = "";
+  const direct = document.createElement("option");
+  direct.value = "";
+  direct.textContent = text.accountCheckProxyDirect;
+  select.append(direct);
+  for (const proxy of checkProxies) {
+    const option = document.createElement("option");
+    option.value = proxy.id;
+    option.textContent = `${proxy.name || proxy.id} · ${formatAddress(proxy)}`;
+    select.append(option);
+  }
+  select.value = checkProxies.some((proxy) => proxy.id === previous) ? previous : "";
+}
+
+async function refreshCheckProxies(selectedId = "") {
+  try {
+    const data = await api("api/proxies");
+    if (Array.isArray(data?.proxies)) checkProxies = data.proxies;
+  } catch {
+    // Keep the bootstrap list if the read failed; the dialog still works.
+  }
+  renderCheckProxies(selectedId);
+}
+
+function openAccountCheck(account) {
+  if (accountCheckContext?.active) {
+    toast(text.accountCheckBusy);
+    return;
+  }
+  const dialog = byId("account-check-dialog");
+  const view = accountDisplay(account);
+  accountCheckContext = {
+    provider: view.provider,
+    key: view.key,
+    account,
+    active: false,
+    lastCheck: view.lastCheck,
+    startedAt: 0,
+    job: null,
+  };
+  byId("account-check-copy").textContent = text.accountCheckCopy;
+  byId("account-check-identity").textContent =
+    `${view.fingerprint.id || text.accountFingerprintNone} · ${view.providerLabel}`;
+  setCheckError("");
+  setCheckView("setup");
+  renderCheckProxies(view.lastCheck?.proxyId || "");
+  if (!dialog.open) dialog.showModal();
+  refreshCheckProxies(view.lastCheck?.proxyId || "");
+  renderAccounts();
+}
+
+async function startAccountCheck() {
+  const context = accountCheckContext;
+  if (!context || context.active) return;
+  const selected = byId("account-check-proxy").value;
+  const proxyId = selected || null;
+  context.active = true;
+  context.startedAt = Date.now();
+  context.job = { state: "launching", proxyId };
+  setCheckError("");
+  setCheckView("running");
+  renderCheckElapsed();
+  startCheckTicker();
+  renderAccounts();
+  try {
+    const data = await api(accountCheckPath(context.provider, context.key), {
+      method: "POST",
+      body: { proxyId },
+    });
+    if (accountCheckContext !== context) return;
+    context.job = data?.job || { state: "launching", proxyId };
+    startCheckPolling();
+  } catch (error) {
+    if (accountCheckContext !== context) return;
+    context.active = false;
+    stopCheckTicker();
+    setCheckError(serverErrorText(error));
+    setCheckView("setup");
+    renderAccounts();
+  }
+}
+
+function checkExitLabel(job, context) {
+  if (job?.proxyName || job?.region) return formatExit(job, text.accountExitDirect);
+  const proxy = checkProxies.find((item) => item?.id === context?.job?.proxyId);
+  return proxy?.name || text.accountExitDirect;
+}
+
+function renderCheckResult(job) {
+  const grade = String(job?.grade || "—");
+  const node = byId("account-check-grade");
+  node.className = `proxy-score account-check-grade ${gradeTone(grade)}`;
+  node.textContent = grade;
+  const time = formatTime(job?.finishedAt || job?.startedAt);
+  byId("account-check-summary").textContent = text.accountCheckSummary
+    .replace("{exit}", checkExitLabel(job, accountCheckContext))
+    .replace("{time}", time);
+  byId("account-check-verdict").textContent = text[`gradeMeaning${grade}`] || "";
+  byId("account-check-grade-value").textContent = grade;
+  byId("account-check-exit").textContent = checkExitLabel(job, accountCheckContext);
+  byId("account-check-time").textContent = time;
+  const lines = byId("account-check-lines");
+  lines.textContent = "";
+  for (const value of formatCheckSummary(job, {
+    exposure: text.accountCheckExposure,
+    clean: text.accountCheckNoExposure,
+  })) {
+    const item = document.createElement("li");
+    item.dataset.tone = "note";
+    item.textContent = value;
+    lines.append(item);
+  }
+  setCheckView("result");
+}
+
+// Failure is NOT a bad verdict: no new verdict exists. The previous one is
+// shown again verbatim, and the server (which writes no history on failure)
+// is re-read so the table keeps that previous verdict.
+function renderCheckFailed(job, previous) {
+  const context = accountCheckContext;
+  const exit = checkExitLabel(job, context);
+  byId("account-check-failed-title").textContent = text.accountCheckFailedTitle;
+  byId("account-check-failed-detail").textContent = text.accountCheckFailedDetail
+    .replace("{reason}", checkReason(job))
+    .replace("{exit}", exit);
+  const lines = byId("account-check-failed-lines");
+  lines.textContent = "";
+  const head = document.createElement("li");
+  head.dataset.tone = "warn";
+  head.textContent = text.accountCheckFailedNoVerdict;
+  lines.append(head);
+  const keep = document.createElement("li");
+  keep.dataset.tone = "note";
+  keep.textContent = previous
+    ? text.accountCheckFailedKeepPrevious
+        .replace("{grade}", String(previous.grade || "—"))
+        .replace("{time}", formatTime(previous.at))
+        .replace("{exit}", formatExit(previous, text.accountExitDirect))
+    : text.accountCheckFailedNoPrevious;
+  lines.append(keep);
+  const exitLine = document.createElement("li");
+  exitLine.dataset.tone = "note";
+  exitLine.textContent = text.accountCheckFailedExit.replace("{exit}", exit);
+  lines.append(exitLine);
+  setCheckView("failed");
+}
+
+async function finishAccountCheck(context, ok) {
+  stopCheckPolling();
+  stopCheckTicker();
+  context.active = false;
+  if (ok) renderCheckResult(context.job);
+  else renderCheckFailed(context.job, context.lastCheck);
+  // Re-read the list: on success it carries the new history, on failure it
+  // still carries the previous verdict because the service wrote nothing.
+  await loadAccountIdentities();
+  renderAccounts();
+  if (ok) toast(text.toastCheckDone.replace("{grade}", String(context.job?.grade || "—")));
+}
+
+async function pollAccountCheck() {
+  accountCheckTimer = null;
+  const context = accountCheckContext;
+  if (!context || !context.active || !byId("account-check-dialog").open) return;
+  try {
+    const data = await api(accountCheckPath(context.provider, context.key));
+    if (accountCheckContext !== context) return;
+    if (data?.job) context.job = data.job;
+  } catch (error) {
+    if (accountCheckContext !== context) return;
+    setCheckError(serverErrorText(error));
+    startCheckPolling();
+    return;
+  }
+  renderCheckElapsed();
+  const state = context.job?.state || "";
+  if (state === "done") {
+    await finishAccountCheck(context, true);
+    return;
+  }
+  if (state === "error" || state === "cancelled") {
+    await finishAccountCheck(context, false);
+    return;
+  }
+  startCheckPolling();
+}
+
+async function cancelAccountCheck() {
+  const context = accountCheckContext;
+  if (!context) return;
+  try {
+    const data = await api(`${accountCheckPath(context.provider, context.key)}/cancel`, {
+      method: "POST",
+    });
+    if (accountCheckContext !== context) return;
+    if (data?.job) context.job = data.job;
+  } catch (error) {
+    if (accountCheckContext === context) setCheckError(serverErrorText(error));
+    return;
+  }
+  stopCheckPolling();
+  stopCheckTicker();
+  context.active = false;
+  byId("account-check-dialog").close();
+  toast(text.toastCheckCancelled);
+  await loadAccountIdentities();
+  renderAccounts();
+}
+
+function showCheckSetup() {
+  stopCheckPolling();
+  stopCheckTicker();
+  if (accountCheckContext) accountCheckContext.active = false;
+  setCheckError("");
+  setCheckView("setup");
+  byId("account-check-proxy").focus();
+  renderAccounts();
+}
+
+function openDetailsFromCheck() {
+  const context = accountCheckContext;
+  if (!context) return;
+  const account = accountIdentities.find(
+    (item) => item?.provider === context.provider && item?.key === context.key,
+  ) || context.account;
+  byId("account-check-dialog").close();
+  openAccountDetail(account);
+}
+
+function closeAccountCheck() {
+  const dialog = byId("account-check-dialog");
+  if (accountCheckContext?.active) {
+    cancelAccountCheck();
+    return;
+  }
+  if (dialog.open) dialog.close();
+}
+
+function cleanupAccountCheck() {
+  stopCheckPolling();
+  stopCheckTicker();
+  accountCheckContext = null;
+  setCheckError("");
+  renderAccounts();
+}
+
 applyText();
 byId("tab-providers").addEventListener("click", () => selectTab("providers"));
 byId("tab-proxies").addEventListener("click", () => selectTab("proxies"));
@@ -3076,6 +4399,8 @@ window.addEventListener("pagehide", () => {
   stopSignInPolling();
   stopScorePolling();
   stopPluginScanPolling();
+  stopCheckPolling();
+  stopCheckTicker();
 });
 // The plugin-scan follow-up pauses while the page is hidden; resume it (same
 // bounded budget) when the page comes back.
@@ -3107,6 +4432,42 @@ byId("signin-dialog").addEventListener("close", cleanupSignInDialog);
 byId("signin-dialog").addEventListener("cancel", (event) => {
   event.preventDefault();
   closeSignInDialog();
+});
+// --- accounts tab / panel wiring ---
+byId("tab-accounts").addEventListener("click", () => {
+  selectTab("accounts");
+  loadAccountIdentities();
+});
+byId("accounts-refresh").addEventListener("click", refreshAccounts);
+byId("account-search").addEventListener("input", () => {
+  accountQuery = byId("account-search").value;
+  renderAccounts();
+});
+byId("account-sort").addEventListener("change", () => {
+  accountSort = byId("account-sort").value;
+  renderAccounts();
+});
+byId("account-filter-all").addEventListener("click", () => setAccountFilter("all"));
+byId("account-filter-signed-in").addEventListener("click", () => setAccountFilter("signedIn"));
+byId("account-filter-signed-out").addEventListener("click", () => setAccountFilter("signedOut"));
+byId("account-detail-close").addEventListener("click", closeAccountDetail);
+byId("account-detail-dismiss").addEventListener("click", closeAccountDetail);
+byId("account-detail-check").addEventListener("click", openCheckFromDetail);
+byId("account-detail-note-save").addEventListener("click", saveAccountNote);
+byId("account-detail-dialog").addEventListener("close", cleanupAccountDetail);
+byId("account-check-close").addEventListener("click", closeAccountCheck);
+byId("account-check-dismiss").addEventListener("click", closeAccountCheck);
+byId("account-check-start").addEventListener("click", startAccountCheck);
+byId("account-check-again").addEventListener("click", startAccountCheck);
+byId("account-check-retry").addEventListener("click", startAccountCheck);
+byId("account-check-reexit").addEventListener("click", showCheckSetup);
+byId("account-check-change-exit").addEventListener("click", showCheckSetup);
+byId("account-check-cancel").addEventListener("click", cancelAccountCheck);
+byId("account-check-details").addEventListener("click", openDetailsFromCheck);
+byId("account-check-dialog").addEventListener("close", cleanupAccountCheck);
+byId("account-check-dialog").addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeAccountCheck();
 });
 
 load();
