@@ -89,6 +89,17 @@ test("a score failure shows the server's own code and message", () => {
   expect(app).not.toContain("scoreUnknownError");
 });
 
+test("a measuring navigation warning keeps the measuring text and shows scoreNavigationFailed", () => {
+  const bar = /function renderScoreBar\(\) \{[\s\S]*?\n\}/.exec(app)?.[0] || "";
+  expect(bar).toContain('state === "measuring" ? text.scoreStateMeasuring : text.scoreStateLaunching');
+  expect(bar).toContain("scoreJob?.warning");
+  expect(bar).toContain('navigationWarningText(scoreJob?.warning, "scoreNavigationFailed")');
+  expect(bar).toContain('message = `${message} · ${warning}`');
+  expect(app).toContain("scoreNavigationFailed:");
+  const cell = /function proxyScoreCell\(proxy\) \{[\s\S]*?\n\}/.exec(app)?.[0] || "";
+  expect(cell).toContain("text.scoring");
+});
+
 test("the Score column and controls are sandbox-safe type=button elements", () => {
   expect(html).toContain('id="col-score"');
   expect(html).not.toContain('type="submit"');

@@ -52,6 +52,11 @@ const job = {
   ip: "",
   error: "",
   errorCode: "",
+  warning: {
+    code: "navigation_failed",
+    status: 504,
+    message: "The scoring browser opened, but the page did not finish loading.",
+  },
   startedAt: "2026-01-01T00:00:00.000Z",
   finishedAt: null,
 };
@@ -156,6 +161,12 @@ test("GET /api/proxy-score returns the job and the window state", async () => {
   const body = await res.json();
   expect(body.job).toEqual(job);
   expect(body.browserOpen).toBe(true);
+});
+
+test("GET /api/proxy-score carries the navigation warning without changing the route shape", async () => {
+  const res = await api("GET", "/api/proxy-score");
+  expect(res.status).toBe(200);
+  expect((await res.json()).job.warning).toEqual(job.warning);
 });
 
 test("POST /api/proxy-score/cancel closes the window and returns the job", async () => {

@@ -99,6 +99,17 @@ test("a sign-in error shows the server's own code and message", () => {
   expect(app).not.toContain("signInUnknownError");
 });
 
+test("a waiting-login navigation warning keeps the state label and shows a localised hint", () => {
+  const rendered = /function renderSignIn\(\) \{[\s\S]*?\n\}/.exec(app)?.[0] || "";
+  expect(rendered).toContain("statusState.textContent = signInStateLabel(state)");
+  expect(rendered).toContain('state === "waiting-login"');
+  expect(rendered).toContain('navigationWarningText(flow?.warning, "signInNavigationWarning")');
+  expect(rendered).toContain("statusDetail.hidden = !warning");
+  expect(app).toContain("const NAVIGATION_WARNING_CODE = \"navigation_failed\";");
+  expect(app).toContain("return warning?.code === NAVIGATION_WARNING_CODE ? text[key] : \"\";");
+  expect((app.match(/\bsignInNavigationWarning:/g) || []).length).toBeGreaterThanOrEqual(4);
+});
+
 test("signInProxy keeps only public fields and never a password", () => {
   const payload = signInPayload("workbuddy", {
     id: "p1",
