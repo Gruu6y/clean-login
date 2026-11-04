@@ -204,6 +204,7 @@ const messages = {
     scoreStateMeasuring: "Reading the Trust Score…",
     scoreStateDone: "Score saved.",
     scoreStateError: "Score failed",
+    scoreNavigationFailed: "The scoring browser opened, but the page did not finish loading. Complete the check in the open window or try again.",
     scoreStateCancelled: "Scoring cancelled.",
     scoreCancel: "Close window",
     filterRegionLabel: "Region",
@@ -547,6 +548,7 @@ const messages = {
     scoreStateMeasuring: "正在读取 Trust Score…",
     scoreStateDone: "评分已保存。",
     scoreStateError: "评分失败",
+    scoreNavigationFailed: "评分浏览器已打开，但页面未在限定时间内加载完成。可在已打开的窗口中完成检测，或稍后重试。",
     scoreStateCancelled: "评分已取消。",
     scoreCancel: "关闭窗口",
     filterRegionLabel: "地区",
@@ -890,6 +892,7 @@ const messages = {
     scoreStateMeasuring: "正在讀取 Trust Score…",
     scoreStateDone: "評分已儲存。",
     scoreStateError: "評分失敗",
+    scoreNavigationFailed: "評分瀏覽器已開啟，但頁面未在限定時間內載入完成。可在已開啟的視窗中完成檢測，或稍後重試。",
     scoreStateCancelled: "評分已取消。",
     scoreCancel: "關閉視窗",
     filterRegionLabel: "地區",
@@ -1233,6 +1236,7 @@ const messages = {
     scoreStateMeasuring: "Trust Score を読み取っています…",
     scoreStateDone: "スコアを保存しました。",
     scoreStateError: "スコア測定失敗",
+    scoreNavigationFailed: "スコア測定用ブラウザーは開きましたが、ページが時間内に読み込まれませんでした。開いているウィンドウで続けるか、後でもう一度お試しください。",
     scoreStateCancelled: "スコア測定をキャンセルしました。",
     scoreCancel: "ウィンドウを閉じる",
     filterRegionLabel: "地域",
@@ -1569,6 +1573,17 @@ function testErrorText(result) {
   return text[testErrorKeys[result?.errorCode]] || result?.error || text.testUnknown;
 }
 
+// The score lifecycle has its own codes. `navigation_failed` needs a localised
+// explanation; anything else keeps showing the raw host text.
+const scoreErrorKeys = {
+  navigation_failed: "scoreNavigationFailed",
+};
+
+function scoreReason(view) {
+  const label = text[scoreErrorKeys[view?.errorCode]] || "";
+  return [label, view?.error].filter(Boolean).join(" · ");
+}
+
 const environmentErrorKeys = {
   insufficient_disk: "errorInsufficientDisk",
   installer_unavailable: "errorInstallerUnavailable",
@@ -1864,7 +1879,7 @@ function proxyScoreCell(proxy) {
   }
   const view = scoreView(proxy);
   if (view.state === "failed") {
-    const reason = [view.errorCode, view.error].filter(Boolean).join(" · ");
+    const reason = scoreReason(view);
     const failed = document.createElement("span");
     failed.className = "proxy-score is-failed";
     failed.textContent = text.scoreFailed;
@@ -2140,7 +2155,7 @@ async function pollScore() {
   scoreStartingId = "";
   if (isScoreSettled(state)) {
     if (state === "error") {
-      const detail = [scoreJob?.errorCode, scoreJob?.error].filter(Boolean).join(" · ");
+      const detail = scoreReason({ errorCode: scoreJob?.errorCode, error: scoreJob?.error });
       setScoreNotice([text.scoreStateError, detail].filter(Boolean).join(" · "), "error");
     } else if (state === "cancelled") {
       setScoreNotice(text.scoreStateCancelled);

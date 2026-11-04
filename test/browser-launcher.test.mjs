@@ -510,13 +510,286 @@ test("launchScoreBrowser times out when the host never opens the browser", async
   ).rejects.toMatchObject({ code: "launch_timeout" });
 });
 
-test("launchScoreBrowser passes the page deadline to the host", async () => {
+
+// ---------- first-navigation failures ----------
+
+test("openSignInBrowser navigates with an explicit readiness condition and deadline", async () => {
+  const dir = await tempDir();
+  const calls = { goto: null };
+  const page = { goto: async (url, options) => { calls.goto = { url, options }; } };
+  const context = { pages: () => [page], on: () => {}, close: async () => {} };
+  const camoufox = {
+    async launchOptions() {
+      return {};
+    },
+    async NewBrowser() {
+      return context;
+    },
+  };
+  const handle = await openSignInBrowser({
+    executablePath: join(dir, "camoufox.exe"),
+    url: "https://account.minimax.cn/oauth-authorize?user_code=F7Y3-9384",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    deps: {
+      checkExecutable: async () => true,
+      loadCamoufox: async () => camoufox,
+      loadPlaywright: async () => ({ firefox: {} }),
+    },
+  });
+  expect(calls.goto.url).toBe("https://account.minimax.cn/oauth-authorize?user_code=F7Y3-9384");
+  expect(calls.goto.options).toEqual({ waitUntil: "domcontentloaded", timeout: 60_000 });
+  expect(handle.navigationError).toBe(null);
+});
+
+test("openSignInBrowser honors a custom navigation deadline", async () => {
+  const dir = await tempDir();
+  const calls = { goto: null };
+  const page = { goto: async (url, options) => { calls.goto = { url, options }; } };
+  const context = { pages: () => [page], close: async () => {} };
+  const camoufox = {
+    async launchOptions() {
+      return {};
+    },
+    async NewBrowser() {
+      return context;
+    },
+  };
+  await openSignInBrowser({
+    executablePath: join(dir, "camoufox.exe"),
+    url: "https://x/signin",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    navTimeoutMs: 12_000,
+    deps: {
+      checkExecutable: async () => true,
+      loadCamoufox: async () => camoufox,
+      loadPlaywright: async () => ({ firefox: {} }),
+    },
+  });
+  expect(calls.goto.options).toEqual({ waitUntil: "domcontentloaded", timeout: 12_000 });
+});
+
+test("openSignInBrowser keeps the window open when the first navigation times out", async () => {
+  const dir = await tempDir();
+  const page = {
+    goto: async () => {
+      throw new Error("Timeout 30000ms exceeded");
+    },
+  };
+  let closed = 0;
+  const context = { pages: () => [page], on: () => {}, close: async () => { closed += 1; } };
+  const camoufox = {
+    async launchOptions() {
+      return {};
+    },
+    async NewBrowser() {
+      return context;
+    },
+  };
+  const handle = await openSignInBrowser({
+    executablePath: join(dir, "camoufox.exe"),
+    url: "https://account.minimax.cn/oauth-authorize?user_code=F7Y3-9384",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    deps: {
+      checkExecutable: async () => true,
+      loadCamoufox: async () => camoufox,
+      loadPlaywright: async () => ({ firefox: {} }),
+    },
+  });
+  // The window is still there for the user to complete the OAuth by hand.
+  expect(closed).toBe(0);
+  expect(handle.page).toBe(page);
+  expect(handle.context).toBe(context);
+  expect(handle.navigationError).toBeInstanceOf(SignInBrowserError);
+  expect(handle.navigationError.code).toBe("navigation_failed");
+  expect(handle.navigationError.status).toBe(504);
+  expect(handle.navigationError.message).toContain("did not finish loading within 60 seconds");
+  expect(handle.navigationError.message).not.toContain("could not be opened");
+  expect(handle.navigationError.detail).toBe("Timeout 30000ms exceeded");
+  expect(handle.navigationError.waitUntil).toBe("domcontentloaded");
+  await handle.close();
+  expect(closed).toBe(1);
+});
+
+test("openSignInBrowser still reports a real launch failure", async () => {
+  const dir = await tempDir();
+  let error;
+  const camoufox = {
+    async launchOptions() {
+      return {};
+    },
+    async NewBrowser() {
+      throw new Error("the browser could not start");
+    },
+  };
+  try {
+    await openSignInBrowser({
+      executablePath: join(dir, "camoufox.exe"),
+      url: "https://x/signin",
+      profileDir: join(dir, "profile"),
+      identity: {},
+      deps: {
+        checkExecutable: async () => true,
+        loadCamoufox: async () => camoufox,
+        loadPlaywright: async () => ({ firefox: {} }),
+      },
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(SignInBrowserError);
+  expect(error.code).toBe("launch_failed");
+  expect(error.status).toBe(502);
+});
+
+test("openSignInBrowser closes the context when the page cannot be created", async () => {
+  const dir = await tempDir();
+  let closed = 0;
+  const context = {
+    pages: () => {
+      throw new Error("no page");
+    },
+    on: () => {},
+    close: async () => { closed += 1; },
+  };
+  const camoufox = {
+    async launchOptions() {
+      return {};
+    },
+    async NewBrowser() {
+      return context;
+    },
+  };
+  let error;
+  try {
+    await openSignInBrowser({
+      executablePath: join(dir, "camoufox.exe"),
+      url: "https://x/signin",
+      profileDir: join(dir, "profile"),
+      identity: {},
+      deps: {
+        checkExecutable: async () => true,
+        loadCamoufox: async () => camoufox,
+        loadPlaywright: async () => ({ firefox: {} }),
+      },
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(SignInBrowserError);
+  expect(error.code).toBe("launch_failed");
+  expect(closed).toBe(1);
+});
+
+test("launchSignInBrowser passes a custom navigation deadline to the host", async () => {
   const dir = await tempDir();
   const exe = join(dir, "camoufox.exe");
   await writeFile(exe, "exe");
   const { EventEmitter } = await import("node:events");
   const child = new EventEmitter();
-  child.pid = 15;
+  child.pid = 31;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  const captured = {};
+  const handle = await launchSignInBrowser({
+    executablePath: exe,
+    url: "https://x/signin",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    navTimeoutMs: 12_000,
+    deps: {
+      fork: (_hostPath, args) => {
+        queueMicrotask(async () => {
+          captured.payload = JSON.parse(await readFile(args[0], "utf8"));
+          child.emit("message", { type: "ready", pid: 31 });
+        });
+        return child;
+      },
+    },
+  });
+  expect(captured.payload.navTimeoutMs).toBe(12_000);
+  await handle.close();
+});
+
+test("launchSignInBrowser surfaces a navigation warning from the host", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 32;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  const handle = await launchSignInBrowser({
+    executablePath: exe,
+    url: "https://x/signin",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    deps: {
+      fork: () => {
+        queueMicrotask(() =>
+          child.emit("message", {
+            type: "ready",
+            pid: 32,
+            warning: { code: "navigation_failed", status: 504, message: "page did not load" },
+          }),
+        );
+        return child;
+      },
+    },
+  });
+  expect(handle.warning).toEqual({ code: "navigation_failed", status: 504, message: "page did not load" });
+  await handle.close();
+});
+
+test("launchSignInBrowser keeps the host status on an error", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 33;
+  child.kill = () => {};
+  child.send = () => {};
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  let error;
+  try {
+    await launchSignInBrowser({
+      executablePath: exe,
+      url: "https://x/signin",
+      profileDir: join(dir, "profile"),
+      identity: {},
+      deps: {
+        fork: () => {
+          queueMicrotask(() =>
+            child.emit("message", { type: "error", code: "runtime_missing", status: 503, message: "no runtime" }),
+          );
+          return child;
+        },
+      },
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(SignInBrowserError);
+  expect(error.code).toBe("runtime_missing");
+  expect(error.status).toBe(503);
+});
+
+test("launchScoreBrowser passes a custom navigation deadline to the host", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 34;
   child.kill = () => {};
   child.send = () => queueMicrotask(() => child.emit("exit", 0));
   child.unref = () => {};
@@ -528,21 +801,22 @@ test("launchScoreBrowser passes the page deadline to the host", async () => {
     profileDir: join(dir, "profile"),
     identity: {},
     timeoutMs: 90_000,
+    navTimeoutMs: 7_500,
     deps: {
       fork: (_hostPath, args) => {
         queueMicrotask(async () => {
           captured.payload = JSON.parse(await readFile(args[0], "utf8"));
-          child.emit("message", { type: "ready", pid: 15 });
+          child.emit("message", { type: "ready", pid: 34 });
         });
         return child;
       },
     },
   });
-  // The host polls the page, so it needs the page's own deadline.
+  expect(captured.payload.navTimeoutMs).toBe(7_500);
+  // The page poll keeps its own, separate deadline.
   expect(captured.payload.timeoutMs).toBe(90_000);
   await handle.close();
 });
-
 
 // The identity check runs headless in its own `check-profile/` directory. The
 // headless flag must reach all three launch sites, and the new host must be
@@ -760,4 +1034,74 @@ test("launchIdentityCheckBrowser times out when the host never opens", async () 
       deps: { fork: () => child },
     }),
   ).rejects.toMatchObject({ code: "launch_timeout" });
+});
+
+test("launchScoreBrowser keeps the host status on an error", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 35;
+  child.kill = () => {};
+  child.send = () => {};
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  let error;
+  try {
+    await launchScoreBrowser({
+      executablePath: exe,
+      url: "https://ip.net.coffee/claude/",
+      profileDir: join(dir, "profile"),
+      identity: {},
+      deps: {
+        fork: () => {
+          queueMicrotask(() =>
+            child.emit("message", { type: "error", code: "executable_missing", status: 503, message: "no exe" }),
+          );
+          return child;
+        },
+      },
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  expect(error).toBeInstanceOf(ScoreBrowserError);
+  expect(error.code).toBe("executable_missing");
+  expect(error.status).toBe(503);
+});
+
+test("launchScoreBrowser surfaces a navigation warning from the host", async () => {
+  const dir = await tempDir();
+  const exe = join(dir, "camoufox.exe");
+  await writeFile(exe, "exe");
+  const { EventEmitter } = await import("node:events");
+  const child = new EventEmitter();
+  child.pid = 36;
+  child.kill = () => {};
+  child.send = () => queueMicrotask(() => child.emit("exit", 0));
+  child.unref = () => {};
+  child.channel = { unref: () => {} };
+  const handle = await launchScoreBrowser({
+    executablePath: exe,
+    url: "https://ip.net.coffee/claude/",
+    profileDir: join(dir, "profile"),
+    identity: {},
+    deps: {
+      fork: () => {
+        queueMicrotask(() => {
+          child.emit("message", {
+            type: "ready",
+            pid: 36,
+            warning: { code: "navigation_failed", status: 504, message: "page did not load" },
+          });
+          child.emit("message", { type: "score", score: 92, label: "优异", ip: "203.0.113.7" });
+        });
+        return child;
+      },
+    },
+  });
+  expect(handle.warning).toEqual({ code: "navigation_failed", status: 504, message: "page did not load" });
+  expect(await handle.result).toEqual({ score: 92, label: "优异", ip: "203.0.113.7" });
+  await handle.close();
 });
