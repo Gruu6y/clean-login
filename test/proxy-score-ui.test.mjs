@@ -115,6 +115,7 @@ test("every new string exists in all four language tables", () => {
     "scoreStateMeasuring",
     "scoreStateDone",
     "scoreStateError",
+    "scoreNavigationFailed",
     "scoreStateCancelled",
     "scoreCancel",
     "filterRegionLabel",

@@ -236,6 +236,7 @@ async function harness(overrides = {}) {
     env: overrides.env ?? {},
     dataDir,
     timeoutMs: overrides.timeoutMs ?? 5_000,
+    navTimeoutMs: overrides.navTimeoutMs,
     resolveExecutable: overrides.resolveExecutable ?? (async () => "/fake/browser"),
     ensureScoreIdentity: overrides.ensureScoreIdentity ?? (async (dir) => {
       state.identityDirs.push(dir);
@@ -386,6 +387,35 @@ test("a browser runtime that cannot be loaded is an unprepared browser", async (
     code: "browser_missing",
   });
   expect(controller.status().job.errorCode).toBe("browser_missing");
+});
+
+test("a first-navigation timeout is reported as navigation_failed, not launch_failed", async () => {
+  const { controller } = await harness({
+    launchBrowser: async () => {
+      throw new ScoreBrowserError(
+        "navigation_failed",
+        "The scoring browser is open, but the page did not finish loading within 60 seconds.",
+        504,
+      );
+    },
+  });
+  await expect(controller.start({ id: "p1", name: "SG 01" })).rejects.toMatchObject({
+    code: "navigation_failed",
+    status: 504,
+  });
+  const view = controller.status();
+  expect(view.job.state).toBe("error");
+  expect(view.job.errorCode).toBe("navigation_failed");
+  // The old catch-all folded everything into launch_failed; it must not.
+  expect(view.job.errorCode).not.toBe("launch_failed");
+});
+
+test("the scoring launch passes its own navigation deadline to the launcher", async () => {
+  const { controller, state, resolveScore } = await harness({ navTimeoutMs: 12_000 });
+  await controller.start({ id: "p1", name: "SG 01" });
+  expect(state.launched.navTimeoutMs).toBe(12_000);
+  resolveScore({ score: 92, label: "优异", ip: "203.0.113.7" });
+  await controller.whenSettled();
 });
 
 test("a page that never answers times out and never invents a score", async () => {
