@@ -418,6 +418,45 @@ test("the scoring launch passes its own navigation deadline to the launcher", as
   await controller.whenSettled();
 });
 
+test("a navigation warning reaches publicJob with only the safe fields", async () => {
+  const score = { score: 92, label: "优异", ip: "203.0.113.7" };
+  const { controller } = await harness({
+    browserResult: Promise.resolve(score),
+    launchBrowser: async () => ({
+      pid: 4321,
+      result: Promise.resolve(score),
+      warning: {
+        code: "navigation_failed",
+        status: 504,
+        message: "The scoring browser opened, but the page did not finish loading.",
+        url: "https://ip.net.coffee/claude/?code=SECRET-CODE",
+        detail: "goto: Timeout 30000ms exceeded",
+        stack: "Error: SECRET-STACK",
+        user_code: "SECRET-CODE",
+      },
+      async close() {},
+    }),
+  });
+  const started = await controller.start({ id: "p1", name: "SG 01" });
+  expect(started.state).toBe("measuring");
+  expect(started.proxyName).toBe("SG 01");
+  expect(started.warning).toEqual({
+    code: "navigation_failed",
+    status: 504,
+    message: "The scoring browser opened, but the page did not finish loading.",
+  });
+  expect(Object.keys(started.warning).sort()).toEqual(["code", "message", "status"]);
+  expect(started.warning).not.toHaveProperty("url");
+  expect(started.warning).not.toHaveProperty("detail");
+  expect(started.warning).not.toHaveProperty("stack");
+  expect(started.warning).not.toHaveProperty("user_code");
+  expect(JSON.stringify(started)).not.toContain("SECRET");
+  const view = controller.status();
+  expect(view.job.state).toBe("measuring");
+  expect(view.job.warning).toEqual(started.warning);
+  await controller.whenSettled();
+});
+
 test("a page that never answers times out and never invents a score", async () => {
   const { controller, state } = await harness({
     timeoutMs: 30,
@@ -539,6 +578,8 @@ test("the job shape is the documented one", async () => {
     "score",
     "startedAt",
     "state",
+    "warning",
   ]);
   expect(view.job.state).toBe("idle");
+  expect(view.job.warning).toBe(null);
 });

@@ -25,6 +25,11 @@ const flow = {
   createdAt: "2026-01-01T00:00:00.000Z",
   finishedAt: null,
   error: null,
+  warning: {
+    code: "navigation_failed",
+    status: 504,
+    message: "The login browser is open, but the page did not finish loading within 60 seconds.",
+  },
 };
 
 const signIn = {
@@ -214,6 +219,12 @@ test("GET /api/signin returns the current flow", async () => {
   const res = await api("GET", "/api/signin");
   expect(res.status).toBe(200);
   expect((await res.json()).flow).toEqual(flow);
+});
+
+test("GET /api/signin carries the navigation warning without changing the route shape", async () => {
+  const res = await api("GET", "/api/signin");
+  expect(res.status).toBe(200);
+  expect((await res.json()).flow.warning).toEqual(flow.warning);
 });
 
 test("POST /api/signin/cancel cancels and returns the new state", async () => {

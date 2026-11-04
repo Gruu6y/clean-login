@@ -100,6 +100,7 @@ const messages = {
     signInStart: "Start sign-in",
     signInStarting: "Starting…",
     signInOpened: "The sign-in page is open in an isolated browser window. Please complete the sign-in in that window.",
+    signInNavigationWarning: "The browser is open, but the page did not finish loading in time. You can still complete sign-in manually in the open window.",
     signInCancel: "Cancel sign-in",
     signInClose: "Close",
     signInStateAuthorizing: "Authorizing…",
@@ -444,6 +445,7 @@ const messages = {
     signInStart: "开始登录",
     signInStarting: "正在开始…",
     signInOpened: "已在隔离浏览器窗口打开登录页，请在那个窗口里完成登录。",
+    signInNavigationWarning: "浏览器已打开，但页面未在限定时间内加载完成。你仍可以在已打开的窗口里手动完成登录。",
     signInCancel: "取消登录",
     signInClose: "关闭",
     signInStateAuthorizing: "正在获取登录地址…",
@@ -788,6 +790,7 @@ const messages = {
     signInStart: "開始登入",
     signInStarting: "正在開始…",
     signInOpened: "已在隔離瀏覽器視窗開啟登入頁，請在那個視窗裡完成登入。",
+    signInNavigationWarning: "瀏覽器已開啟，但頁面未在限定時間內載入完成。你仍可在已開啟的視窗裡手動完成登入。",
     signInCancel: "取消登入",
     signInClose: "關閉",
     signInStateAuthorizing: "正在取得登入網址…",
@@ -1132,6 +1135,7 @@ const messages = {
     signInStart: "ログインを開始",
     signInStarting: "開始しています…",
     signInOpened: "隔離されたブラウザーウィンドウでログインページを開きました。そのウィンドウでログインを完了してください。",
+    signInNavigationWarning: "ブラウザーは開いていますが、ページが制限時間内に読み込めませんでした。開いているウィンドウで手動でログインを完了できます。",
     signInCancel: "ログインをキャンセル",
     signInClose: "閉じる",
     signInStateAuthorizing: "認可を取得しています…",
@@ -1582,6 +1586,15 @@ const scoreErrorKeys = {
 function scoreReason(view) {
   const label = text[scoreErrorKeys[view?.errorCode]] || "";
   return [label, view?.error].filter(Boolean).join(" · ");
+}
+
+// A live warning is not an error: waiting-login and measuring stay active, and
+// the user is told the open browser can still be used. Only the known code is
+// localised; the raw host message is never shown here.
+const NAVIGATION_WARNING_CODE = "navigation_failed";
+
+function navigationWarningText(warning, key) {
+  return warning?.code === NAVIGATION_WARNING_CODE ? text[key] : "";
 }
 
 const environmentErrorKeys = {
@@ -2090,6 +2103,8 @@ function renderScoreBar() {
   } else if (isScoreActive(state)) {
     message = state === "measuring" ? text.scoreStateMeasuring : text.scoreStateLaunching;
     if (scoreJob?.proxyName) message = `${message} ${scoreJob.proxyName}`;
+    const warning = state === "measuring" ? navigationWarningText(scoreJob?.warning, "scoreNavigationFailed") : "";
+    if (warning) message = `${message} · ${warning}`;
     kind = "active";
   } else if (scoreNotice) {
     message = scoreNotice;
@@ -2592,8 +2607,9 @@ function renderSignIn() {
     statusDetail.textContent = text.signInCancelled;
     statusDetail.hidden = false;
   } else {
-    statusDetail.textContent = "";
-    statusDetail.hidden = true;
+    const warning = state === "waiting-login" ? navigationWarningText(flow?.warning, "signInNavigationWarning") : "";
+    statusDetail.textContent = warning;
+    statusDetail.hidden = !warning;
   }
 
   const result = byId("signin-result");

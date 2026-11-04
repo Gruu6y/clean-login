@@ -418,6 +418,46 @@ test("chooseBrowserMethod prefers an explicit browser method and skips local", (
   expect(chooseBrowserMethod([local, ambiguous])).toBe(ambiguous);
 });
 
+test("a navigation warning reaches publicFlow with only the safe fields", async () => {
+  let release;
+  const pending = new Promise((resolve) => {
+    release = resolve;
+  });
+  const { controller } = await harness({
+    methods: [browserMethod({ callback: () => pending })],
+    launchBrowser: async () => ({
+      pid: 4321,
+      warning: {
+        code: "navigation_failed",
+        status: 504,
+        message: "The login browser is open, but the page did not finish loading within 60 seconds.",
+        url: "https://provider/signin?user_code=SECRET-CODE",
+        detail: "goto: Timeout 30000ms exceeded",
+        stack: "Error: SECRET-STACK",
+        user_code: "SECRET-CODE",
+      },
+      async close() {},
+    }),
+  });
+  await controller.startSignIn({ provider: "workbuddy" });
+  const flow = controller.status();
+  expect(flow.state).toBe("waiting-login");
+  expect(flow.instructions).toBe("go");
+  expect(flow.warning).toEqual({
+    code: "navigation_failed",
+    status: 504,
+    message: "The login browser is open, but the page did not finish loading within 60 seconds.",
+  });
+  expect(Object.keys(flow.warning).sort()).toEqual(["code", "message", "status"]);
+  expect(flow.warning).not.toHaveProperty("url");
+  expect(flow.warning).not.toHaveProperty("detail");
+  expect(flow.warning).not.toHaveProperty("stack");
+  expect(flow.warning).not.toHaveProperty("user_code");
+  expect(JSON.stringify(flow)).not.toContain("SECRET");
+  release(success());
+  await controller.whenSettled();
+});
+
 test("the state list covers the whole lifecycle", () => {
   expect(SIGNIN_STATES).toEqual([
     "idle",
