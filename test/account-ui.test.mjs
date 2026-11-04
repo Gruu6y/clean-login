@@ -5,6 +5,8 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  accountCheckCancelPath,
+  accountCheckPath,
   accountIdentityPath,
   accountIdentityView,
   accountLabel,
@@ -94,8 +96,25 @@ test("accountIdentityView exposes no fingerprint and no path", () => {
     label: "retired-a",
     uid: "u-2",
     retiredAt: "2026-11-02T09:00:00.000Z",
+    provider: "workbuddy",
+    key: "workbuddy#a",
+    signedIn: false,
+    note: "",
+    lastLogin: null,
+    lastCheck: null,
   });
+  // Still never a fingerprint, a path, or a credential.
+  expect(Object.keys(view).some((key) => /fingerprint|path|password|host|port/i.test(key))).toBe(false);
   expect(accountIdentityView({}).label).toBe("");
+});
+
+test("the check endpoints URL-encode both segments", () => {
+  expect(accountCheckPath("workbuddy", "workbuddy#ab12")).toBe(
+    "api/accounts/workbuddy/workbuddy%23ab12/check",
+  );
+  expect(accountCheckCancelPath("a/b", "c d")).toBe(
+    "api/accounts/a%2Fb/c%20d/check/cancel",
+  );
 });
 
 test("the sign-in dialog offers the identity picker and posts the chosen key", () => {
@@ -138,8 +157,29 @@ test("the identity card lists each identity and wires its clear entry", () => {
     "signInAccountLabel",
     "signInAccountHint",
     "signInAccountNew",
+    // accounts page v2 copy, also counted in all four tables
+    "accountsTitle",
+    "accountSearchLabel",
+    "accountFilterAll",
+    "gradeDisclaimer",
+    "accountDetailNoteSave",
+    "accountCheckFailedNoVerdict",
+    "checkErrorInternal",
+    "toastNoteSaved",
   ]) {
     const count = (app.match(new RegExp(`\\b${key}:`, "g")) || []).length;
     expect(count).toBeGreaterThanOrEqual(4);
   }
+});
+
+test("the accounts tab and its dialogs are wired to real requests", () => {
+  expect(html).toContain('id="tab-accounts"');
+  expect(html).toContain('id="panel-accounts"');
+  expect(html).toContain('id="account-detail-dialog"');
+  expect(html).toContain('id="account-check-dialog"');
+  expect(app).toContain('byId("tab-accounts").addEventListener');
+  expect(app).toContain('byId("account-check-start").addEventListener');
+  expect(app).toContain("openSignInDialog(provider, { accountKey: view.key })");
+  expect(app).toContain("accountCheckPath(context.provider, context.key)");
+  expect(app).toContain('method: "PATCH"');
 });

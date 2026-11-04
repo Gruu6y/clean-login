@@ -54,12 +54,31 @@ export function accountIdentityPath(provider, key) {
 }
 
 // The row shown for one identity: the account's own name, its uid and when it
-// was last signed in. No fingerprint, no path, no credential.
+// was last signed in. The accounts page also needs the provider, key and
+// current sign-in state; still no fingerprint, no path, no credential.
 export function accountIdentityView(account) {
   const value = account && typeof account === "object" ? account : {};
   return {
     label: accountLabel(value),
     uid: typeof value.uid === "string" && value.uid ? value.uid : "",
     retiredAt: typeof value.signedInAt === "string" ? value.signedInAt : "",
+    provider: typeof value.provider === "string" ? value.provider : "",
+    key: String(value.key ?? ""),
+    signedIn: Boolean(value.signedIn),
+    note: typeof value.note === "string" ? value.note : "",
+    lastLogin: value.lastLogin && typeof value.lastLogin === "object" ? value.lastLogin : null,
+    lastCheck: value.lastCheck && typeof value.lastCheck === "object" ? value.lastCheck : null,
   };
+}
+
+// The check endpoint for one account. Both segments are URL-encoded by
+// accountIdentityPath; the service owns the job behind `/check`.
+export function accountCheckPath(provider, key) {
+  return `${accountIdentityPath(provider, key)}/check`;
+}
+
+// Cancelling a running check is a distinct POST; failure/cancel writes no
+// history, so the previous verdict stays untouched.
+export function accountCheckCancelPath(provider, key) {
+  return `${accountCheckPath(provider, key)}/cancel`;
 }

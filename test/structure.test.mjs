@@ -38,6 +38,7 @@ test("ships every file the manifest names", () => {
     "ui/index.html",
     "ui/style.css",
     "ui/app.js",
+    "ui/account-view.js",
     "README.md",
     "LICENSE",
   ]) {

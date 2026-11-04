@@ -128,6 +128,15 @@ test("a claimed identity keeps its key and its pin byte for byte", async () => {
   expect(calls[0].path.id).toBe(key);
 
   // The ledger records the successful sign-in and travels with the directory.
+  // A successful sign-in also records its exit (a direct one here), so the
+  // whitelisted lastLogin/loginHistory fields are part of that ledger.
+  const directLogin = {
+    at: expect.any(String),
+    proxyId: null,
+    proxyName: "",
+    region: "",
+    type: null,
+  };
   expect(await readAccountMeta(dir)).toEqual({
     version: 1,
     provider: "workbuddy",
@@ -135,6 +144,8 @@ test("a claimed identity keeps its key and its pin byte for byte", async () => {
     accountId: "me",
     uid: "u-1",
     signedInAt: expect.any(String),
+    lastLogin: directLogin,
+    loginHistory: [directLogin],
   });
 });
 
