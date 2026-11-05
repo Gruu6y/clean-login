@@ -2570,6 +2570,10 @@ function setSignInError(message) {
 function serverErrorText(error) {
   const code = error?.code ? String(error.code) : "";
   const message = error?.serverMessage ? String(error.serverMessage) : "";
+  // "network" is raised by our own fetch wrapper, not by the service, and it
+  // has no serverMessage. Showing that bare word in the sign-in dialog tells
+  // the user nothing; it has a localized string like every other code.
+  if (code === "network") return text.errorNetwork;
   return [code, message].filter(Boolean).join(" · ") || apiErrorText(error?.code);
 }
 
@@ -3290,7 +3294,19 @@ async function loadEnvironment() {
   renderEnvironment();
 }
 
+// The service binds in the background now, so the page can load before the
+// port is listening. Keep retrying a failed bootstrap instead of leaving the
+// account UI stuck on "error" until the user clicks Retry.
+let loadRetryTimer = null;
+let loadRetryCount = 0;
+const LOAD_RETRY_LIMIT = 120;
+const LOAD_RETRY_DELAY_MS = 1500;
+
 async function load() {
+  if (loadRetryTimer !== null) {
+    clearTimeout(loadRetryTimer);
+    loadRetryTimer = null;
+  }
   setServiceState("connecting", text.connecting);
   byId("retry").hidden = true;
   // A retry restarts the plugin-scan follow-up from scratch instead of leaving
@@ -3329,7 +3345,20 @@ async function load() {
     loadEnvironment();
     loadScoreStatus();
     loadAccountIdentities();
-  } catch {
+    loadRetryCount = 0;
+  } catch (error) {
+    // A refused connection is transient while the service takes the port over,
+    // so retry it quietly instead of declaring the service dead. A token that
+    // is no longer valid is reloaded by the api layer and must not be retried.
+    if (error?.code !== "unauthorized" && loadRetryCount < LOAD_RETRY_LIMIT) {
+      loadRetryCount += 1;
+      loadRetryTimer = setTimeout(() => {
+        loadRetryTimer = null;
+        load();
+      }, LOAD_RETRY_DELAY_MS);
+      return;
+    }
+    loadRetryCount = 0;
     setServiceState("error", text.failed);
     byId("retry").hidden = false;
   }

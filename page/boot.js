@@ -159,9 +159,34 @@
     // WebKit does not report an unreachable target: location.replace simply
     // does nothing and this document stays alive. If we are still here after
     // 8s, the navigation did not happen, so show a real message and a way back.
-    const timer = window.setTimeout(() => showFailure(text.failed), 8000);
-    window.addEventListener?.("pagehide", () => window.clearTimeout?.(timer), { once: true });
-    location.replace(target.href);
+    // The service now binds in the background, so the page can legitimately be
+    // ready before the port is. While the previous host still owns 3492 the
+    // navigation simply reaches that host; in the short gap where nothing
+    // listens yet, WebKit leaves this document alive. Retry the navigation
+    // instead of declaring the service dead after one attempt.
+    let attempts = 0;
+    const MAX_ATTEMPTS = 120;
+    const RETRY_MS = 1500;
+    let interval = null;
+    const stop = () => {
+      if (interval !== null) window.clearInterval?.(interval);
+      interval = null;
+    };
+    const navigate = () => {
+      attempts += 1;
+      // A changing query keeps each attempt a real navigation rather than a
+      // repeat of the one that just failed; the service only reads the path.
+      const url = new URL(target.href);
+      if (attempts > 1) url.searchParams.set("retry", String(attempts));
+      location.replace(url.href);
+      if (attempts >= MAX_ATTEMPTS) {
+        stop();
+        showFailure(text.failed);
+      }
+    };
+    navigate();
+    interval = window.setInterval(navigate, RETRY_MS);
+    window.addEventListener?.("pagehide", stop, { once: true });
   })().catch((error) => {
     showFailure(`${text.failed} ${String(error?.message || error)}`);
   });
