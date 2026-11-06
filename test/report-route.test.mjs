@@ -79,7 +79,7 @@ test("the report routes are token-gated, allowlisted and credential-free", async
     expect(built.report.body).not.toContain("状态说明");
     expect(built.report.body).not.toContain("should-not-appear");
     expect(built.report.body).not.toContain("ghp_should_not_appear");
-    expect(built.report.url.startsWith("https://github.com/Gruu6y/clean-login/issues/new?")).toBe(true);
+    expect(built.report.url.startsWith("https://github.com/Gruu6y/magpie-clean-login/issues/new?")).toBe(true);
     expect(built.report.url.length).toBeLessThanOrEqual(12000);
 
     // The launch route refuses anything that is not our issue form, and it
@@ -87,7 +87,7 @@ test("the report routes are token-gated, allowlisted and credential-free", async
     for (const bad of [
       "file:///C:/Windows/System32/cmd.exe",
       "javascript:alert(1)",
-      "https://github.com/Gruu6y/clean-login/issues",
+      "https://github.com/Gruu6y/magpie-clean-login/issues",
       "https://example.com/issues/new",
     ]) {
       const refused = await post("/api/report/open", { url: bad });

@@ -3,7 +3,7 @@
 // magpie loads a plugin in a fresh host process after an update, and the host it
 // replaces keeps the plugin's loopback listener until it exits. A bind attempted
 // inside that window fails with EADDRINUSE; that used to end the load --
-// `plugin github:Gruu6y/clean-login didn't load: Error: Failed to start server.
+// `plugin github:Gruu6y/magpie-clean-login didn't load: Error: Failed to start server.
 // Is port 3492 in use?` -- and left the page without a service until magpie
 // restarted. The page reads its port from `window.magpie.options` and has no
 // fallback, so waiting for the port is the only fix available to the plugin.

@@ -97,11 +97,11 @@ test("localized prefers the reporter's language, then zh, then en", () => {
 test("the issue URL is our repo's new-issue form and nothing else", () => {
   expect(isAllowedIssueUrl(ISSUE_NEW_URL)).toBe(true);
   expect(isAllowedIssueUrl(`${ISSUE_NEW_URL}?title=a&body=b`)).toBe(true);
-  expect(isAllowedIssueUrl("https://github.com/Gruu6y/clean-login/issues")).toBe(false);
-  expect(isAllowedIssueUrl("https://github.com/Gruu6y/clean-login/issues/new/choose")).toBe(false);
+  expect(isAllowedIssueUrl("https://github.com/Gruu6y/magpie-clean-login/issues")).toBe(false);
+  expect(isAllowedIssueUrl("https://github.com/Gruu6y/magpie-clean-login/issues/new/choose")).toBe(false);
   expect(isAllowedIssueUrl("https://github.com/someone-else/clean-login/issues/new")).toBe(false);
-  expect(isAllowedIssueUrl("http://github.com/Gruu6y/clean-login/issues/new")).toBe(false);
-  expect(isAllowedIssueUrl("https://user:pass@github.com/Gruu6y/clean-login/issues/new")).toBe(false);
+  expect(isAllowedIssueUrl("http://github.com/Gruu6y/magpie-clean-login/issues/new")).toBe(false);
+  expect(isAllowedIssueUrl("https://user:pass@github.com/Gruu6y/magpie-clean-login/issues/new")).toBe(false);
   expect(isAllowedIssueUrl("file:///etc/passwd")).toBe(false);
   expect(isAllowedIssueUrl("javascript:alert(1)")).toBe(false);
   expect(isAllowedIssueUrl("not a url")).toBe(false);

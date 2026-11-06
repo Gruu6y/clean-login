@@ -49,7 +49,7 @@ test("a URL outside the allowlist never reaches spawn", async () => {
     "file:///etc/passwd",
     "javascript:alert(1)",
     "https://github.com/someone-else/clean-login/issues/new",
-    "https://github.com/Gruu6y/clean-login/issues",
+    "https://github.com/Gruu6y/magpie-clean-login/issues",
   ]) {
     await expect(openExternal(bad, { spawnImpl })).rejects.toMatchObject({
       code: "url-not-allowed",

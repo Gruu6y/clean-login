@@ -1,6 +1,6 @@
 {
   "name": "@gruu6y/page-clean-login",
-  "version": "0.1.47",
+  "version": "0.1.48",
   "description": "Manage proxy IPs and provider sign-ins in magpie, with each account signed in through an isolated browser. A page plugin with a loopback-only host service.",
   "license": "MIT",
   "type": "module",
@@ -29,10 +29,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Gruu6y/clean-login.git"
+    "url": "git+https://github.com/Gruu6y/magpie-clean-login.git"
   },
   "bugs": {
-    "url": "https://github.com/Gruu6y/clean-login/issues"
+    "url": "https://github.com/Gruu6y/magpie-clean-login/issues"
   },
   "engines": {
     "bun": ">=1.4.2"
@@ -43,7 +43,7 @@
     "playwright-core": "1.62.0"
   },
   "magpie": {
-    "icon": "https://raw.githubusercontent.com/Gruu6y/clean-login/main/assets/icon.svg",
+    "icon": "https://raw.githubusercontent.com/Gruu6y/magpie-clean-login/main/assets/icon.svg",
     "page": {
       "title": "Clean Login",
       "titles": {
