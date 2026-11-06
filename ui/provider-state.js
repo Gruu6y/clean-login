@@ -202,3 +202,59 @@ export function methodCategoryText(category, text = {}) {
   if (category === "pending") return text.providerMethodPendingTag || "way to confirm";
   return text.providerMethodUnknownTag || "way to confirm";
 }
+
+// --- finding one card -----------------------------------------------------
+//
+// The tab holds two grids: what the user already signs in to, and everything
+// else behind one collapsed section. Search has to cover both, because a
+// provider that cannot be found is the same as a provider that is missing.
+//
+// A card matches when every word of the query appears in something the card
+// says about itself: its name, the id the service knows it by, the id magpie
+// uses for it, the plugin package that provides its sign-in, its description,
+// or the label of a sign-in method. A blank query is not a search — it means
+// "show everything", never "nothing matched".
+
+function searchWords(query) {
+  return String(query ?? "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+export function providerSearchText(provider = {}, lang = "en") {
+  const card = provider && typeof provider === "object" ? provider : {};
+  const methods = Array.isArray(card.signInMethods) ? card.signInMethods : [];
+  const details = Array.isArray(card.signInMethodDetails) ? card.signInMethodDetails : [];
+  const parts = [
+    card.id,
+    card.name,
+    card.agentId,
+    card.signInProvider,
+    // The description in the page's language, and in English as well: people
+    // type a provider's English name on a Chinese page all the time, and a
+    // search that refuses that is a search they stop using.
+    localizedText(card.description, lang),
+    localizedText(card.description, "en"),
+    ...methods,
+    ...details.map((detail) => detail?.label),
+  ];
+  return parts
+    .filter((part) => typeof part === "string" && part)
+    .join(" ")
+    .toLowerCase();
+}
+
+export function providerMatchesQuery(provider, query, lang = "en") {
+  const words = searchWords(query);
+  if (words.length === 0) return true;
+  const haystack = providerSearchText(provider, lang);
+  return words.every((word) => haystack.includes(word));
+}
+
+export function filterProviders(items, query, lang = "en") {
+  const list = Array.isArray(items) ? items : [];
+  const words = searchWords(query);
+  if (words.length === 0) return list;
+  return list.filter((provider) => providerMatchesQuery(provider, query, lang));
+}

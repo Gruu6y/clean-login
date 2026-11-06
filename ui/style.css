@@ -139,6 +139,29 @@ main { flex: 1; }
 .section-head p { margin: 4px 0 0; max-width: 640px; color: var(--muted); font-size: 13px; }
 .section-actions { display: flex; align-items: center; gap: 8px; flex: none; }
 
+/* Search for the Providers tab. The field sits in the section head so it stays
+   put while the grids below it are re-rendered on every keystroke. */
+.search-field { display: flex; flex-direction: column; gap: 4px; min-width: 232px; }
+.search-label { color: var(--muted); font-size: 12px; line-height: 1.3; }
+.search-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.search-input::placeholder { color: var(--faint); }
+.search-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.search-status { min-height: 15px; color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -1090,6 +1113,7 @@ main { flex: 1; }
   .section-head { flex-wrap: wrap; gap: 12px; }
   .section-actions { width: 100%; }
   .section-actions .button { width: 100%; }
+  .search-field { width: 100%; min-width: 0; }
   .proxy-filters { align-items: stretch; }
   .filter-actions { margin-left: 0; width: 100%; justify-content: space-between; }
   .empty { min-height: 220px; padding: 26px 18px; }
