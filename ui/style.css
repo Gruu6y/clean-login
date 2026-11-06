@@ -706,7 +706,7 @@ main { flex: 1; }
   grid-template-columns:
     minmax(125px, 1.15fr)
     minmax(135px, 1.1fr)
-    minmax(78px, 0.7fr)
+    minmax(104px, 0.7fr)
     minmax(92px, 0.8fr)
     minmax(105px, 0.9fr)
     minmax(95px, 0.8fr)
@@ -750,15 +750,17 @@ main { flex: 1; }
   white-space: nowrap;
 }
 .proxy-region { min-width: 0; color: var(--text); font-size: 12.5px; }
+/* Never ellipsize the exit IP: a clipped address cannot be told apart from
+   another exit. The line may wrap between the label and the IP instead. */
 .proxy-region small {
   display: block;
-  overflow: hidden;
   margin-top: 1px;
   color: var(--faint);
   font: 11px/1.4 var(--mono);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+.proxy-region-exit-label { white-space: nowrap; }
 .proxy-status-cell { min-width: 0; }
 .proxy-status {
   display: inline-flex;
