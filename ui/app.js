@@ -92,6 +92,7 @@ const messages = {
     addAccount: "Add account",
     providerOriginPlugin: "Plugin",
     providerOriginMagpie: "magpie built-in",
+    providerOriginCatalog: "Not installed",
     reportIssue: "Report a problem",
     reportTitle: "Report a problem",
     reportCopy: "The text is already written for you. One click opens GitHub's new-issue page in your browser with the title and body filled in; you only press Create.",
@@ -451,6 +452,7 @@ const messages = {
     addAccount: "添加账号",
     providerOriginPlugin: "第三方插件",
     providerOriginMagpie: "magpie 自带",
+    providerOriginCatalog: "未安装",
     reportIssue: "报告问题",
     reportTitle: "报告问题",
     reportCopy: "正文已经帮你写好了。点一下就会用系统默认浏览器打开 GitHub 的新建 issue 页面，标题和正文都填好，你只要再点 Create 就发出去了。",
@@ -810,6 +812,7 @@ const messages = {
     addAccount: "新增帳號",
     providerOriginPlugin: "第三方外掛",
     providerOriginMagpie: "magpie 自帶",
+    providerOriginCatalog: "未安裝",
     reportIssue: "回報問題",
     reportTitle: "回報問題",
     reportCopy: "正文已經幫你寫好了。點一下就會用系統預設瀏覽器開啟 GitHub 的新建 issue 頁面，標題和正文都填好，你只要再點 Create 就送出去了。",
@@ -1169,6 +1172,7 @@ const messages = {
     addAccount: "アカウントを追加",
     providerOriginPlugin: "プラグイン",
     providerOriginMagpie: "magpie 内蔵",
+    providerOriginCatalog: "未インストール",
     reportIssue: "問題を報告",
     reportTitle: "問題を報告",
     reportCopy: "本文はすでに用意されています。クリックすると既定のブラウザで GitHub の新しい issue が開き、タイトルと本文が入力済みです。Create を押すだけで投稿できます。",
@@ -2421,7 +2425,10 @@ function providerCard(provider) {
   // installed exposes. The three entries in this plugin's own registry are
   // this plugin, so they carry no tag.
   const origin =
-    provider.presence === "plugin-only" ? "plugin" : provider.presence === "magpie-only" ? "magpie" : "";
+    provider.presence === "plugin-only" ? "plugin"
+      : provider.presence === "magpie-only" ? "magpie"
+        : provider.presence === "catalog" ? "catalog"
+          : "";
 
   head.append(mark, name);
 
@@ -2429,7 +2436,10 @@ function providerCard(provider) {
     const originTag = document.createElement("span");
     originTag.className = "provider-origin";
     originTag.dataset.origin = origin;
-    originTag.textContent = origin === "plugin" ? text.providerOriginPlugin : text.providerOriginMagpie;
+    originTag.textContent =
+      origin === "plugin" ? text.providerOriginPlugin
+        : origin === "catalog" ? text.providerOriginCatalog
+          : text.providerOriginMagpie;
     head.append(originTag);
   }
 

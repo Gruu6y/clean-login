@@ -47,7 +47,7 @@ test("the four presences and their counts survive a third source", () => {
   const view = mergeProviderSources({ local: LOCAL, magpie: ["codex", "cursor", "mystery-ai"], plugins: PLUGINS });
   expect(view.source).toBe("magpie");
   expect(view.magpie).toEqual({ available: true, count: 3 });
-  expect(view.counts).toEqual({ total: 5, both: 1, localOnly: 2, magpieOnly: 2, pluginOnly: 0 });
+  expect(view.counts).toEqual({ total: 5, both: 1, localOnly: 2, magpieOnly: 2, pluginOnly: 0, catalogOnly: 0 });
   const map = byId(view);
   expect(map.antigravity.presence).toBe("local-only");
   expect(map.codex.presence).toBe("both");
@@ -167,7 +167,7 @@ test("an unavailable plugin scan degrades to the first layer with no false claim
     // about the installed plugins, not a claim about verification.
     expect(map["mystery-ai"].capability.reason.en).toContain("has no browser sign-in method");
     expect(map["mystery-ai"].capability.reason.en).not.toMatch(/not verified|unverified/i);
-    expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0 });
+    expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0, catalogOnly: 0 });
   }
 });
 
@@ -276,7 +276,7 @@ test("a plugin-only provider gets a fifth-presence card with its derived methods
   const view = mergeProviderSources({ local: LOCAL, magpie: ["codex"], plugins });
   // A provider that is in neither the local registry nor magpie's recognized
   // list still gets a card, tagged with the fifth presence.
-  expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 0, pluginOnly: 1 });
+  expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 0, pluginOnly: 1, catalogOnly: 0 });
   expect(view.plugins).toEqual({ available: true, count: 1, browserMethods: 0, matched: 1 });
   const kiro = byId(view).kiro;
   expect(kiro).toBeTruthy();
