@@ -457,6 +457,40 @@
     </div>
   </dialog>
 
+  <!-- Reporting a provider card. The body is written by the service, so the
+       page only collects an optional note; nothing here reads an account.
+       Every control is type="button": magpie's sandbox has no allow-forms, so
+       a form or a submit button would be silently dead in this frame. -->
+  <dialog id="report-dialog" class="dialog report-dialog">
+    <div class="dialog-head">
+      <div>
+        <h3 id="report-title">Report a problem</h3>
+        <p id="report-copy"></p>
+      </div>
+      <button class="dialog-close" id="report-close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="dialog-body">
+      <p class="report-card-line" id="report-card"></p>
+      <div class="field">
+        <label for="report-note" id="report-note-label">Anything to add?</label>
+        <textarea id="report-note" rows="3" maxlength="1500"></textarea>
+        <p class="field-hint" id="report-note-hint"></p>
+      </div>
+      <div class="field">
+        <label id="report-draft-label">What will be posted</label>
+        <pre class="report-draft" id="report-draft" tabindex="0"></pre>
+        <p class="field-hint" id="report-draft-hint"></p>
+      </div>
+      <p class="form-error" id="report-error" role="alert" hidden></p>
+      <p class="report-status" id="report-status" hidden></p>
+    </div>
+    <div class="dialog-footer">
+      <button class="button" id="report-cancel" type="button">Cancel</button>
+      <button class="button" id="report-copy-body" type="button">Copy text</button>
+      <button class="button primary" id="report-open" type="button">Open on GitHub</button>
+    </div>
+  </dialog>
+
   <div class="toasts" id="toasts" aria-live="polite"></div>
 </body>
 </html>

@@ -90,6 +90,21 @@ const messages = {
     providerPluginsFailed: "Installed plugin scan failed: {error}",
     providerPluginsScanTimedOut: "The installed-plugin scan is still running. Reload the page to see its result.",
     addAccount: "Add account",
+    reportIssue: "Report a problem",
+    reportTitle: "Report a problem",
+    reportCopy: "The text is already written for you. One click opens GitHub's new-issue page in your browser with the title and body filled in; you only press Create.",
+    reportNoteLabel: "Anything to add? (optional)",
+    reportNoteHint: "What you saw, what you clicked, what happened. You can leave this empty.",
+    reportDraftLabel: "What will be posted",
+    reportDraftHint: "No account, cookie, token or proxy credential is included.",
+    reportOpen: "Open on GitHub",
+    reportCopyBody: "Copy text",
+    reportCancel: "Cancel",
+    reportPreparing: "Writing the report…",
+    reportOpened: "Opened in your browser with the title and body filled in. Press Create to post it.",
+    reportCopied: "The text is on your clipboard.",
+    reportCopyFailed: "Copying was blocked. Select the text above and copy it by hand.",
+    reportBuildFailed: "The report could not be prepared.",
     signInTitle: "Add account",
     signInCopy: "This opens an isolated browser window. Complete the sign-in there; Clean Login writes the resulting credential into magpie.",
     signInUnverified: "This flow has not been verified in Clean Login yet. You can try it directly; failures are reported honestly and feedback is welcome.",
@@ -435,6 +450,21 @@ const messages = {
     providerPluginsFailed: "已安装插件扫描失败：{error}",
     providerPluginsScanTimedOut: "已安装插件扫描仍在进行。刷新页面以查看结果。",
     addAccount: "添加账号",
+    reportIssue: "报告问题",
+    reportTitle: "报告问题",
+    reportCopy: "正文已经帮你写好了。点一下就会用系统默认浏览器打开 GitHub 的新建 issue 页面，标题和正文都填好，你只要再点 Create 就发出去了。",
+    reportNoteLabel: "补充说明（可选）",
+    reportNoteHint: "写下你看到的现象、点过的按钮、实际结果。留空也能直接发。",
+    reportDraftLabel: "将要提交的内容",
+    reportDraftHint: "内容不含账号、cookie、令牌或代理凭据。",
+    reportOpen: "在浏览器中打开",
+    reportCopyBody: "复制正文",
+    reportCancel: "取消",
+    reportPreparing: "正在准备正文…",
+    reportOpened: "已在浏览器中打开，标题和正文都填好了，点一下 Create 就发出去了。",
+    reportCopied: "正文已复制。",
+    reportCopyFailed: "复制被拦住了，请手动选中上面的正文再复制。",
+    reportBuildFailed: "没能生成报告正文。",
     signInTitle: "添加账号",
     signInCopy: "这会打开一个隔离浏览器窗口。请在窗口里完成登录，干净登录会把生成的凭据写入 magpie。",
     signInUnverified: "该流程还没有在干净登录中验证过。你可以直接尝试，失败会如实报错，也欢迎反馈问题。",
@@ -780,6 +810,21 @@ const messages = {
     providerPluginsFailed: "已安裝外掛掃描失敗：{error}",
     providerPluginsScanTimedOut: "已安裝外掛掃描仍在進行。重新整理頁面以查看結果。",
     addAccount: "新增帳號",
+    reportIssue: "回報問題",
+    reportTitle: "回報問題",
+    reportCopy: "正文已經幫你寫好了。點一下就會用系統預設瀏覽器開啟 GitHub 的新建 issue 頁面，標題和正文都填好，你只要再點 Create 就送出去了。",
+    reportNoteLabel: "補充說明（選填）",
+    reportNoteHint: "寫下你看到的現象、點過的按鈕、實際結果。留空也能直接送。",
+    reportDraftLabel: "將要提交的內容",
+    reportDraftHint: "內容不含帳號、cookie、權杖或代理憑證。",
+    reportOpen: "在瀏覽器中開啟",
+    reportCopyBody: "複製正文",
+    reportCancel: "取消",
+    reportPreparing: "正在準備正文…",
+    reportOpened: "已在瀏覽器中開啟，標題和正文都填好了，點一下 Create 就送出去了。",
+    reportCopied: "正文已複製。",
+    reportCopyFailed: "複製被攔住了，請手動選取上面的正文再複製。",
+    reportBuildFailed: "沒能產生回報正文。",
     signInTitle: "新增帳號",
     signInCopy: "這會開啟一個隔離瀏覽器視窗。請在視窗裡完成登入，乾淨登入會把產生的憑證寫入 magpie。",
     signInUnverified: "此流程尚未在乾淨登入中驗證過。你可以直接嘗試，失敗會如實回報，也歡迎回報問題。",
@@ -1125,6 +1170,21 @@ const messages = {
     providerPluginsFailed: "インストール済みプラグインのスキャンに失敗しました：{error}",
     providerPluginsScanTimedOut: "インストール済みプラグインのスキャンはまだ実行中です。ページを再読み込みすると結果が表示されます。",
     addAccount: "アカウントを追加",
+    reportIssue: "問題を報告",
+    reportTitle: "問題を報告",
+    reportCopy: "本文はすでに用意されています。クリックすると既定のブラウザで GitHub の新しい issue が開き、タイトルと本文が入力済みです。Create を押すだけで投稿できます。",
+    reportNoteLabel: "補足（任意）",
+    reportNoteHint: "見たこと、押したボタン、実際の結果。空のままでも送れます。",
+    reportDraftLabel: "送信される内容",
+    reportDraftHint: "アカウント、cookie、トークン、プロキシの資格情報は含まれません。",
+    reportOpen: "ブラウザで開く",
+    reportCopyBody: "本文をコピー",
+    reportCancel: "キャンセル",
+    reportPreparing: "本文を準備しています…",
+    reportOpened: "ブラウザで開きました。タイトルと本文は入力済みなので、Create を押すだけで投稿できます。",
+    reportCopied: "本文をコピーしました。",
+    reportCopyFailed: "コピーできませんでした。上の本文を選択して手動でコピーしてください。",
+    reportBuildFailed: "報告本文を作成できませんでした。",
     signInTitle: "アカウントを追加",
     signInCopy: "隔離されたブラウザーウィンドウを開きます。そこでログインすると、クリーンログインが得られた認証情報を magpie に書き込みます。",
     signInUnverified: "このフローはクリーンログインではまだ検証されていません。そのまま試せます。失敗はそのまま表示され、問題の報告も歓迎します。",
@@ -1683,6 +1743,16 @@ function applyText() {
   byId("signin-cancel").textContent = text.signInCancel;
   byId("signin-close").setAttribute("aria-label", text.signInClose);
   byId("signin-close-footer").textContent = text.signInClose;
+  byId("report-title").textContent = text.reportTitle;
+  byId("report-copy").textContent = text.reportCopy;
+  byId("report-note-label").textContent = text.reportNoteLabel;
+  byId("report-note-hint").textContent = text.reportNoteHint;
+  byId("report-draft-label").textContent = text.reportDraftLabel;
+  byId("report-draft-hint").textContent = text.reportDraftHint;
+  byId("report-open").textContent = text.reportOpen;
+  byId("report-copy-body").textContent = text.reportCopyBody;
+  byId("report-cancel").textContent = text.reportCancel;
+  byId("report-close").setAttribute("aria-label", text.close);
   byId("signin-account-label").textContent = text.signInAccountLabel;
   byId("signin-account-hint").textContent = text.signInAccountHint;
   byId("identities-title").textContent = text.identitiesTitle;
@@ -2382,9 +2452,9 @@ function providerCard(provider) {
   // should be able to try so they can report what happens. Every control is
   // type="button" with an explicit click handler because magpie mounts the page
   // in a sandbox without allow-forms; a submit control would be silently dead.
+  const actions = document.createElement("div");
+  actions.className = "provider-actions";
   if (providerCanSignIn(provider)) {
-    const actions = document.createElement("div");
-    actions.className = "provider-actions";
     const add = document.createElement("button");
     add.type = "button";
     add.className = "button primary provider-add";
@@ -2392,10 +2462,161 @@ function providerCard(provider) {
     add.textContent = text.addAccount;
     add.addEventListener("click", () => openSignInDialog(provider));
     actions.append(add);
-    card.append(actions);
   }
+  // Reporting is offered on every card, including the ones that offer no way in
+  // at all: a card with nothing to click is exactly the one worth reporting.
+  const report = document.createElement("button");
+  report.type = "button";
+  report.className = "button provider-report";
+  report.dataset.providerId = provider.id;
+  report.textContent = text.reportIssue;
+  report.addEventListener("click", () => openReportDialog(provider));
+  actions.append(report);
+  card.append(actions);
 
   return card;
+}
+
+// --- reporting a card ------------------------------------------------------
+//
+// Every card offers one way to tell us something is wrong, and the report is
+// written for the user: the service assembles it from an allowlist, so nothing
+// the page sends can leak a credential or widen what gets posted. The page
+// cannot open a link itself (magpie's sandbox carries allow-scripts only, with
+// no allow-popups), so the local service opens the finished GitHub URL in the
+// system browser on the user's behalf. Nothing is posted automatically: the
+// user presses Create on GitHub, having seen the whole body first.
+
+let reportProvider = null;
+let reportRequest = null;
+let reportTimer = 0;
+let reportSeq = 0;
+
+function setReportError(message) {
+  const node = byId("report-error");
+  node.textContent = message || "";
+  node.hidden = !message;
+}
+
+function setReportStatus(message) {
+  const node = byId("report-status");
+  node.textContent = message || "";
+  node.hidden = !message;
+}
+
+async function refreshReport() {
+  const seq = (reportSeq += 1);
+  setReportError("");
+  const note = byId("report-note").value;
+  byId("report-draft").textContent = text.reportPreparing;
+  try {
+    const data = await api("api/report", {
+      method: "POST",
+      body: { provider: reportProvider, note, language: langKey },
+    });
+    if (seq !== reportSeq) return;
+    reportRequest = data?.report ?? null;
+    byId("report-draft").textContent = reportRequest?.body || "";
+  } catch (error) {
+    if (seq !== reportSeq) return;
+    reportRequest = null;
+    byId("report-draft").textContent = "";
+    setReportError(serverErrorText(error));
+  }
+}
+
+function scheduleReport() {
+  window.clearTimeout(reportTimer);
+  reportTimer = window.setTimeout(() => {
+    reportTimer = 0;
+    refreshReport();
+  }, 350);
+}
+
+function openReportDialog(provider) {
+  // Only the fields the report needs cross into the dialog. Nothing else from
+  // the provider object (and nothing from an account) is sent back to the
+  // service, so a report can never carry more than the card already shows.
+  reportProvider = {
+    id: provider.id,
+    name: provider.name,
+    capabilityState: provider.capability?.state || provider.capabilityState,
+    capabilityReason: provider.capability?.reason || provider.capabilityReason,
+    description: provider.description,
+    notice: provider.notice,
+    authMethods: provider.authMethods,
+    sources: provider.sources,
+    pluginPackage: provider.pluginPackage,
+  };
+  reportRequest = null;
+  setReportError("");
+  setReportStatus("");
+  byId("report-note").value = "";
+  const status = providerStatusView(provider, text);
+  byId("report-card").textContent = `${provider.name || provider.id} · ${status.label}`;
+  const dialog = byId("report-dialog");
+  if (typeof dialog.showModal === "function") dialog.showModal();
+  else dialog.setAttribute("open", "");
+  refreshReport();
+}
+
+function closeReportDialog() {
+  window.clearTimeout(reportTimer);
+  reportTimer = 0;
+  reportSeq += 1;
+  const dialog = byId("report-dialog");
+  if (typeof dialog.close === "function") dialog.close();
+  else dialog.removeAttribute("open");
+}
+
+async function copyReportBody() {
+  const body = reportRequest?.body || "";
+  if (!body) return;
+  setReportError("");
+  try {
+    await navigator.clipboard.writeText(body);
+    toast(text.reportCopied);
+    return;
+  } catch {
+    // This document has an opaque origin, so the clipboard permission can be
+    // refused. Fall back to selecting the draft so the text is still
+    // reachable, and say so plainly if even that is blocked.
+  }
+  const pre = byId("report-draft");
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(pre);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    if (document.execCommand("copy")) {
+      toast(text.reportCopied);
+      return;
+    }
+  } catch {
+    /* fall through to the honest message */
+  }
+  setReportError(text.reportCopyFailed);
+}
+
+async function openReportOnGitHub() {
+  setReportError("");
+  setReportStatus("");
+  if (!reportRequest?.url) await refreshReport();
+  if (!reportRequest?.url) {
+    setReportError(text.reportBuildFailed);
+    return;
+  }
+  const button = byId("report-open");
+  button.disabled = true;
+  try {
+    await api("api/report/open", { method: "POST", body: { url: reportRequest.url } });
+    setReportStatus(text.reportOpened);
+  } catch (error) {
+    setReportError(serverErrorText(error));
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // --- account identities ----------------------------------------------------
@@ -4498,6 +4719,11 @@ byId("signin-cancel").addEventListener("click", cancelSignIn);
 byId("identities-retry").addEventListener("click", loadAccountIdentities);
 byId("signin-close").addEventListener("click", closeSignInDialog);
 byId("signin-close-footer").addEventListener("click", closeSignInDialog);
+byId("report-close").addEventListener("click", closeReportDialog);
+byId("report-cancel").addEventListener("click", closeReportDialog);
+byId("report-copy-body").addEventListener("click", copyReportBody);
+byId("report-open").addEventListener("click", openReportOnGitHub);
+byId("report-note").addEventListener("input", scheduleReport);
 byId("signin-dialog").addEventListener("close", cleanupSignInDialog);
 // Escape closes the dialog natively; intercept so a running flow is cancelled
 // first instead of being left invisible in the background.
