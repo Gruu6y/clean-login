@@ -18,6 +18,7 @@ import {
   localizedText,
   methodCategory,
   methodCategoryText,
+  partitionProviders,
   providerCanSignIn,
   providerStatusView,
   shouldPollPluginScan,
@@ -62,6 +63,8 @@ const messages = {
     providersCopy: "Supported providers and their current sign-in readiness.",
     providersEmptyTitle: "No providers yet",
     providersEmptyCopy: "Supported providers appear here when the local service is ready.",
+    providersMoreTitle: "Other subscription providers",
+    providersMoreHint: "Every other subscription service the local data knows about: magpie's own providers, and the plugins written for magpie and checked against its built-in sign-in.",
     providerPending: "Pending verification",
     providerReady: "Ready",
     providerBlocked: "Blocked",
@@ -422,6 +425,8 @@ const messages = {
     providersCopy: "受支持的供应商及其当前的登录就绪状态。",
     providersEmptyTitle: "还没有供应商",
     providersEmptyCopy: "本地服务就绪后，支持的供应商会显示在这里。",
+    providersMoreTitle: "其他订阅类供应商",
+    providersMoreHint: "其余订阅类供应商都在这里：magpie 自带的，以及为 magpie 编写、对照过内置登录的插件。",
     providerPending: "等待验证",
     providerReady: "就绪",
     providerBlocked: "已阻止",
@@ -782,6 +787,8 @@ const messages = {
     providersCopy: "支援的供應商及其目前的登入就緒狀態。",
     providersEmptyTitle: "還沒有供應商",
     providersEmptyCopy: "本機服務就緒後，支援的供應商會顯示在這裡。",
+    providersMoreTitle: "其他訂閱類供應商",
+    providersMoreHint: "其餘訂閱類供應商都在這裡：magpie 內建的，以及為 magpie 撰寫、對照過內建登入的外掛。",
     providerPending: "等待驗證",
     providerReady: "就緒",
     providerBlocked: "已封鎖",
@@ -1142,6 +1149,8 @@ const messages = {
     providersCopy: "対応プロバイダーと現在のログイン準備状況です。",
     providersEmptyTitle: "プロバイダーがありません",
     providersEmptyCopy: "ローカルサービスが準備できると、対応プロバイダーがここに表示されます。",
+    providersMoreTitle: "その他のサブスクリプション",
+    providersMoreHint: "残りのサブスクリプション提供元はここにすべて入ります。magpie 内蔵のものと、magpie 向けに作られ内蔵サインインと突き合わせ済みのプラグインです。",
     providerPending: "検証待ち",
     providerReady: "準備完了",
     providerBlocked: "ブロック中",
@@ -1682,6 +1691,8 @@ function applyText() {
   byId("providers-copy").textContent = text.providersCopy;
   byId("providers-empty-title").textContent = text.providersEmptyTitle;
   byId("providers-empty-copy").textContent = text.providersEmptyCopy;
+  byId("providers-more-title").textContent = text.providersMoreTitle;
+  byId("providers-more-hint").textContent = text.providersMoreHint;
   byId("environment-title").textContent = text.environmentTitle;
   byId("environment-copy").textContent = text.environmentCopy;
   byId("environment-size-label").textContent = text.environmentSizeLabel;
@@ -2761,6 +2772,10 @@ async function loadAccountIdentities() {
     accountIdentitiesLoading = false;
     renderIdentities();
     renderAccounts();
+    // The counts order the main list, so the cards are laid out again once the
+    // identities arrive. The split does not depend on them: no card moves
+    // between the main list and the collapsed catalog.
+    renderProviders(providerCatalog);
   }
 }
 
@@ -3322,17 +3337,41 @@ function renderProviderSources(view) {
   note.textContent = `${diffNote} · ${pluginNote}`;
 }
 
+// How many accounts each provider has, from the identities read. The count only
+// orders the main list, so a pending or failed read leaves the order the
+// service sent instead of blocking the cards.
+function accountCounts() {
+  const counts = {};
+  for (const account of Array.isArray(accountIdentities) ? accountIdentities : []) {
+    const id = typeof account?.provider === "string" ? account.provider : "";
+    if (!id) continue;
+    counts[id] = (counts[id] || 0) + 1;
+  }
+  return counts;
+}
+
+// The page has two regions and only two: the main list of providers a user can
+// sign in to right now (the ones with the most accounts first), and one
+// collapsed catalog holding every other subscription provider the local data
+// knows about, so no subscription service quietly disappears from the page.
+// The split itself is pure and lives in ui/provider-state.js.
 function renderProviders(items) {
   providerCatalog = Array.isArray(items) ? items : [];
   const list = byId("providers-list");
+  const more = byId("providers-more");
+  const moreList = byId("providers-more-list");
   const empty = byId("providers-empty");
-  byId("provider-count").textContent = String(items.length);
-  const hasProviders = items.length > 0;
-  empty.hidden = hasProviders;
-  list.hidden = !hasProviders;
+  byId("provider-count").textContent = String(providerCatalog.length);
+  const { primary, other } = partitionProviders(providerCatalog, accountCounts());
+  empty.hidden = primary.length + other.length > 0;
+  list.hidden = primary.length === 0;
   list.textContent = "";
-  if (!hasProviders) return;
-  for (const provider of items) list.append(providerCard(provider));
+  for (const provider of primary) list.append(providerCard(provider));
+  if (!more) return;
+  more.hidden = other.length === 0;
+  byId("providers-more-count").textContent = String(other.length);
+  moreList.textContent = "";
+  for (const provider of other) moreList.append(providerCard(provider));
 }
 
 function render(data) {
