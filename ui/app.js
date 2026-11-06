@@ -1551,7 +1551,12 @@ document.documentElement.lang = messages[langKey] ? langKey : "en";
 const theme = query.get("theme");
 if (theme === "dark" || theme === "light") {
   document.documentElement.dataset.theme = theme;
-} else {
+} else if (
+  document.documentElement.dataset.theme !== "dark" &&
+  document.documentElement.dataset.theme !== "light"
+) {
+  // The magpie host may already have injected data-theme on <html>; keep that
+  // choice and only fall back to the OS preference when nothing is set.
   document.documentElement.dataset.theme =
     window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
 }
@@ -1714,6 +1719,9 @@ function applyText() {
   byId("page-subtitle").textContent = text.subtitle;
   byId("tab-providers-label").textContent = text.providers;
   byId("tab-proxies-label").textContent = text.proxies;
+  byId("rail-providers-label").textContent = text.providers;
+  byId("rail-proxies-label").textContent = text.proxies;
+  byId("rail-accounts-label").textContent = text.accounts;
   byId("providers-title").textContent = text.providersTitle;
   byId("providers-copy").textContent = text.providersCopy;
   byId("providers-empty-title").textContent = text.providersEmptyTitle;
@@ -1875,6 +1883,10 @@ function selectTab(name) {
     byId(tabId).classList.toggle("is-active", active);
     byId(tabId).setAttribute("aria-selected", String(active));
     byId(panelId).hidden = !active;
+    // The right-hand rail mirrors the tab (a decorative duplicate of the
+    // tablist, so it carries no controls); keep its highlight in step.
+    const rail = byId(`rail-${key}`);
+    if (rail) rail.classList.toggle("is-active", active);
   }
 }
 
@@ -2044,7 +2056,7 @@ function proxyScoreCell(proxy) {
 
 function proxyRow(proxy) {
   const row = document.createElement("div");
-  row.className = "proxy-row";
+  row.className = "proxy-row tbl-row";
   row.dataset.proxyId = proxy.id;
 
   const name = document.createElement("div");
@@ -4268,7 +4280,7 @@ function accountRunningFor(provider, key) {
 function accountRow(account) {
   const view = accountDisplay(account);
   const row = document.createElement("div");
-  row.className = "proxy-row account-row";
+  row.className = "proxy-row account-row tbl-row";
   row.dataset.accountKey = view.key;
   row.dataset.provider = view.provider;
 
@@ -4892,6 +4904,17 @@ function cleanupAccountCheck() {
 applyText();
 byId("tab-providers").addEventListener("click", () => selectTab("providers"));
 byId("tab-proxies").addEventListener("click", () => selectTab("proxies"));
+// Reading progress for the top hairline. Decoration only: the value comes from
+// the scroll position and is never persisted.
+const progressLine = byId("progress-line");
+const updateProgress = () => {
+  const max = document.documentElement.scrollHeight - window.innerHeight;
+  const ratio = max > 0 ? window.scrollY / max : 0;
+  progressLine.style.transform = `scaleX(${Math.min(1, Math.max(0, ratio))})`;
+};
+window.addEventListener("scroll", updateProgress, { passive: true });
+window.addEventListener("resize", updateProgress);
+updateProgress();
 // Searching re-renders on every keystroke; the list is a few dozen cards, so
 // there is nothing to debounce. `search` covers the browser's own clear (x).
 for (const event of ["input", "search"]) {
