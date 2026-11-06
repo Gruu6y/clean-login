@@ -202,9 +202,9 @@ test("/api/provider-sources reports the injected plugin scan and its derived met
   expect(byId["brand-new"].browserMethod).toBe(true);
   expect(byId["brand-new"].signInProvider).toBe("brand-new");
   expect(byId["brand-new"].authMethods).toEqual([
-    { type: "oauth", label: "Brand New (browser)", browser: true, category: "browser", prompts: [], runnable: true },
-    { type: "oauth", label: "brand-new CLI's sign-in", browser: false, category: "local", prompts: [], runnable: true },
-    { type: "api", label: "Brand New API key", browser: false, category: "key", prompts: [], runnable: false },
+    { type: "oauth", label: "Brand New (browser)", browser: true, category: "browser", prompts: [], runnable: true, fields: [] },
+    { type: "oauth", label: "brand-new CLI's sign-in", browser: false, category: "local", prompts: [], runnable: true, fields: [] },
+    { type: "api", label: "Brand New API key", browser: false, category: "key", prompts: [], runnable: false, fields: [] },
   ]);
   expect(byId["brand-new"].capability.reason.en).toContain("browser sign-in method");
   expect(byId["brand-new"].capability.reason.en).not.toMatch(/not verified|unverified/i);

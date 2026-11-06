@@ -68,9 +68,9 @@ test("each card carries the derived methods and the browserMethod flag", () => {
   const map = byId(view);
   expect(map.codex.browserMethod).toBe(true);
   expect(map.codex.authMethods).toEqual([
-    { type: "oauth", label: "Codex (browser)", browser: true, category: "browser", prompts: [], runnable: true },
-    { type: "oauth", label: "codex's sign-in", browser: false, category: "local", prompts: [], runnable: true },
-    { type: "api", label: "Codex API key", browser: false, category: "key", prompts: [], runnable: false },
+    { type: "oauth", label: "Codex (browser)", browser: true, category: "browser", prompts: [], runnable: true, fields: [] },
+    { type: "oauth", label: "codex's sign-in", browser: false, category: "local", prompts: [], runnable: true, fields: [] },
+    { type: "api", label: "Codex API key", browser: false, category: "key", prompts: [], runnable: false, fields: [] },
   ]);
   expect(map.codex.pluginPackage).toBe("@magpie-community/opencode-codex-auth");
   expect(map.antigravity.browserMethod).toBe(false);
@@ -208,6 +208,61 @@ test("a failed plugin scan is worded as a failure, not as an unverified flow", (
   expect(never["mystery-ai"].capability.reason.en).toContain("has no browser sign-in method");
 });
 
+// A method that asks something before it starts carries the questions on the
+// card, already projected: the dialog renders them and the answers travel back
+// with the request. Nothing typed, defaulted or executable survives the card.
+test("a method's declared prompts reach the card as projected fields", () => {
+  const plugins = {
+    available: true,
+    providers: [
+      {
+        id: "qoder-cn",
+        package: "@magpie-community/opencode-qoder-auth",
+        methods: [
+          {
+            type: "oauth",
+            label: "Sign in with Qoder CN",
+            browser: false,
+            category: "browser",
+            runnable: true,
+            prompts: [],
+          },
+          {
+            type: "oauth",
+            label: "Sign in with Qoder CN Enterprise (VPC)",
+            browser: false,
+            category: "form",
+            runnable: true,
+            prompts: [
+              {
+                type: "text",
+                key: "vpc",
+                message: "Your enterprise's VPC instance",
+                placeholder: "https://vpc.example.com",
+                default: "preset",
+                validate: () => true,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const view = mergeProviderSources({ local: LOCAL, magpie: ["qoder-cn"], plugins });
+  const card = byId(view)["qoder-cn"];
+  expect(card.authMethods[0].fields).toEqual([]);
+  expect(card.authMethods[1].fields).toEqual([
+    { type: "text", key: "vpc", message: "Your enterprise's VPC instance", options: [] },
+  ]);
+  const serialized = JSON.stringify(card);
+  for (const leak of ["preset", "vpc.example.com", "validate"]) {
+    expect(serialized).not.toContain(leak);
+  }
+  // A method with no prompts reports an empty list, so the dialog can tell
+  // "nothing to ask" from "not projected".
+  expect(card.authMethods[0].fields).toHaveLength(0);
+});
+
 test("a plugin-only provider gets a fifth-presence card with its derived methods", () => {
   const plugins = {
     available: true,
@@ -229,8 +284,8 @@ test("a plugin-only provider gets a fifth-presence card with its derived methods
   expect(kiro.sources).toEqual({ local: false, magpie: false });
   expect(kiro.pluginPackage).toBe("@magpie-community/opencode-kiro-auth");
   expect(kiro.authMethods).toEqual([
-    { type: "oauth", label: "Kiro (Google, GitHub, AWS Builder ID)", browser: false, category: "pending", prompts: [], runnable: true },
-    { type: "api", label: "Kiro API key", browser: false, category: "key", prompts: [], runnable: false },
+    { type: "oauth", label: "Kiro (Google, GitHub, AWS Builder ID)", browser: false, category: "pending", prompts: [], runnable: true, fields: [] },
+    { type: "api", label: "Kiro API key", browser: false, category: "key", prompts: [], runnable: false, fields: [] },
   ]);  expect(kiro.browserMethod).toBe(false);
   expect(kiro.unconfirmedMethod).toBe(true);
   expect(kiro.capability.state).toBe("pending");

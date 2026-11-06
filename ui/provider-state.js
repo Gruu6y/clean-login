@@ -142,6 +142,27 @@ export function methodCategory(method = {}) {
   return "unknown";
 }
 
+// The fields the chosen sign-in method asks for before it can start. The card
+// already carries them, projected from the plugin's declared prompts (type, key,
+// the plugin's own question and a select's options), so this only picks the
+// right method's list. A method with no declared prompts yields an empty list
+// and the dialog shows no extra fields.
+export function signInMethodFields(provider = {}, label = "") {
+  const methods = Array.isArray(provider?.authMethods) ? provider.authMethods : [];
+  const wanted = typeof label === "string" ? label.trim() : "";
+  const known = Array.isArray(provider?.signInMethods) ? provider.signInMethods : [];
+  const fallback = typeof known[0] === "string" ? known[0].trim() : "";
+  const method = wanted
+    ? methods.find((item) => item?.label === wanted)
+    : methods.find((item) => item?.label === fallback) ||
+      methods.find(
+        (item) =>
+          item?.type === "oauth" && item?.runnable === true && methodCategory(item) !== "local",
+      );
+  const fields = Array.isArray(method?.fields) ? method.fields : [];
+  return fields.filter((field) => field && typeof field.key === "string" && field.key);
+}
+
 // The marker text for one category, in the page's language. Kept next to
 // methodCategory() so the kind -> wording mapping is testable without a DOM.
 export function methodCategoryText(category, text = {}) {

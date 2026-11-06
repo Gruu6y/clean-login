@@ -127,7 +127,10 @@ test("a select alone is not a form: ZCode's team method still opens a browser", 
       },
     ],
   });
-  expect(team.category).toBe("pending");
+  // A select is a question, not a form: the flow still ends in a page the
+  // browser opens, so the method is a browser flow (and its answer travels as
+  // an input, not as form data).
+  expect(team.category).toBe("browser");
   expect(requiresFormInput(team.prompts)).toBe(false);
 });
 

@@ -458,6 +458,106 @@ test("a navigation warning reaches publicFlow with only the safe fields", async 
   await controller.whenSettled();
 });
 
+// A method that asks something before it starts: ZCode's team picker, Qoder
+// CN's VPC instance, the PAT prompts. Without the answer the plugin either
+// throws or silently takes a default (ZCode's team flow would always sign in to
+// Z.ai), so the answers the page collected must reach authorize().
+function promptingMethod({ seen, prompts, url = "https://provider/team", callback } = {}) {
+  return {
+    type: "oauth",
+    label: "Provider team (browser)",
+    prompts: prompts ?? [
+      {
+        type: "select",
+        key: "site",
+        message: "Where is the team's plan?",
+        options: [
+          { label: "Z.ai", value: "zai" },
+          { label: "BigModel", value: "bigmodel" },
+        ],
+      },
+    ],
+    authorize: async (inputs) => {
+      if (seen) seen.push(inputs);
+      return { url, instructions: "go", method: "auto", callback: callback ?? (async () => success()) };
+    },
+  };
+}
+
+test("the answers the page collected reach authorize()", async () => {
+  const seen = [];
+  const method = promptingMethod({ seen });
+  const { controller } = await harness({ methods: [method] });
+  const started = await controller.startSignIn({
+    provider: "workbuddy",
+    methodInputs: { site: "bigmodel" },
+  });
+  expect(started.url).toBe("https://provider/team");
+  expect(seen).toEqual([{ site: "bigmodel" }]);
+  await controller.whenSettled();
+  expect(controller.status().state).toBe("done");
+});
+
+test("an answer the method never asked for is not forwarded", async () => {
+  const seen = [];
+  const { controller } = await harness({ methods: [promptingMethod({ seen })] });
+  await controller.startSignIn({
+    provider: "workbuddy",
+    methodInputs: { site: "zai", pat: "pt-smuggled", extra: "x" },
+  });
+  expect(seen).toEqual([{ site: "zai" }]);
+  await controller.whenSettled();
+});
+
+test("a required answer left blank is refused before authorize() runs", async () => {
+  const seen = [];
+  const method = promptingMethod({
+    seen,
+    prompts: [{ type: "password", key: "pat", message: "Your Personal Access Token" }],
+  });
+  const { controller, state, clientCalls } = await harness({ methods: [method] });
+  await expect(
+    controller.startSignIn({ provider: "workbuddy" }),
+  ).rejects.toMatchObject({ code: "method_input_required", status: 400 });
+  const flow = controller.status();
+  expect(flow.state).toBe("error");
+  expect(flow.error).toMatchObject({
+    code: "method_input_required",
+    message: "Your Personal Access Token",
+  });
+  // Nothing ran: no authorize(), no browser, no write-back.
+  expect(seen).toHaveLength(0);
+  expect(state.launched).toBeNull();
+  expect(clientCalls).toHaveLength(0);
+
+  // The same method with the answer supplied runs normally.
+  const retry = await harness({
+    methods: [promptingMethod({ seen, prompts: method.prompts })],
+  });
+  await retry.controller.startSignIn({
+    provider: "workbuddy",
+    methodInputs: { pat: "pt-real" },
+  });
+  expect(seen).toEqual([{ pat: "pt-real" }]);
+  await retry.controller.whenSettled();
+});
+
+test("the flow status never carries the answers", async () => {
+  const { controller } = await harness({
+    methods: [
+      promptingMethod({
+        prompts: [{ type: "password", key: "pat", message: "Your Personal Access Token" }],
+      }),
+    ],
+  });
+  await controller.startSignIn({ provider: "workbuddy", methodInputs: { pat: "pt-SECRET" } });
+  const flow = controller.status();
+  expect(JSON.stringify(flow)).not.toContain("pt-SECRET");
+  expect(flow).not.toHaveProperty("inputs");
+  expect(flow).not.toHaveProperty("pat");
+  await controller.whenSettled();
+});
+
 test("the state list covers the whole lifecycle", () => {
   expect(SIGNIN_STATES).toEqual([
     "idle",

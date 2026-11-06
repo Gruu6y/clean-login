@@ -953,6 +953,12 @@ main { flex: 1; }
 }
 .field-hint { margin: 5px 0 0; color: var(--faint); font-size: 11px; }
 
+/* The fields a sign-in method asks for (a team's site, an enterprise VPC
+   instance or domain, a Personal Access Token). They sit between the method
+   picker and the proxy picker and are rebuilt whenever the method changes. */
+#signin-inputs { display: grid; gap: 11px; }
+#signin-inputs .field label { font-weight: 520; }
+
 .form-error {
   margin: 13px 0 0;
   padding: 8px 10px;

@@ -33,11 +33,11 @@ const flow = {
 };
 
 const signIn = {
-  async startSignIn({ provider, proxy, single, methodLabel, account }) {
+  async startSignIn({ provider, proxy, single, methodLabel, account, methodInputs }) {
     if (provider === "missing-plugin") {
       throw new SignInFlowError("plugin_missing", 'No installed plugin provides "missing-plugin".', 404);
     }
-    lastStart = { provider, proxy, single, methodLabel, account };
+    lastStart = { provider, proxy, single, methodLabel, account, methodInputs: methodInputs ?? null };
     return {
       flowId: "flow-1",
       key: "workbuddy",
@@ -102,6 +102,7 @@ test("POST /api/signin starts a flow and returns the browser URL, not credential
     single: false,
     methodLabel: null,
     account: null,
+    methodInputs: null,
   });
   expect(JSON.stringify(body)).not.toMatch(/access|refresh|token/i);
 });
@@ -116,6 +117,7 @@ test("POST /api/signin forwards the proxy and the single flag", async () => {
     single: true,
     methodLabel: null,
     account: null,
+    methodInputs: null,
   });
 });
 
@@ -162,6 +164,45 @@ test("POST /api/signin ignores a blank or non-string method label", async () => 
     expect(res.status).toBe(202);
     expect(lastStart.methodLabel).toBeNull();
   }
+});
+
+// A method that asks something before it starts (ZCode's team picker, Qoder
+// CN's VPC instance, the PAT prompts) gets its answers from the page. Only the
+// strings the page typed travel, and only when there is something to send.
+test("POST /api/signin forwards the answers to the method's prompts", async () => {
+  const res = await api("POST", "/api/signin", {
+    provider: "zcode",
+    methodLabel: "ZCode: a team's GLM Coding Plan",
+    inputs: { site: "bigmodel" },
+  });
+  expect(res.status).toBe(202);
+  expect(lastStart.methodInputs).toEqual({ site: "bigmodel" });
+});
+
+test("POST /api/signin sends no answers when the page left them blank", async () => {
+  for (const inputs of [undefined, null, {}, { site: "" }, { site: "   " }]) {
+    const res = await api("POST", "/api/signin", { provider: "zcode", inputs });
+    expect(res.status).toBe(202);
+    expect(lastStart.methodInputs).toBeNull();
+  }
+});
+
+test("POST /api/signin refuses a malformed answers body", async () => {
+  const bodies = [
+    ["site"],
+    { site: 42 },
+    { site: null },
+    { site: "x".repeat(513) },
+    { "": "value" },
+  ];
+  for (const inputs of bodies) {
+    const res = await api("POST", "/api/signin", { provider: "zcode", inputs });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("invalid_inputs");
+  }
+  // A refused body never reaches the controller.
+  expect(lastStart.methodInputs).toBeNull();
 });
 
 test("POST /api/signin resolves a stored proxy id server-side", async () => {

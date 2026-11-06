@@ -31,7 +31,24 @@ export function signInMethodLabel(label) {
   return trimmed ? trimmed : null;
 }
 
-export function signInPayload(provider, proxy, methodLabel = null, account = null) {
+// The answers to a method's declared prompts, as the service accepts them: a
+// plain object of non-empty trimmed strings. Blank fields are dropped so a
+// select left on "choose" falls back to the plugin's own default, and an object
+// with nothing filled in is not sent at all.
+export function signInInputs(values) {
+  if (!values || typeof values !== "object" || Array.isArray(values)) return null;
+  const inputs = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (typeof key !== "string" || !key) continue;
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    inputs[key] = trimmed;
+  }
+  return Object.keys(inputs).length > 0 ? inputs : null;
+}
+
+export function signInPayload(provider, proxy, methodLabel = null, account = null, inputs = null) {
   const payload = { provider: String(provider || ""), proxy: signInProxy(proxy) };
   const label = signInMethodLabel(methodLabel);
   if (label) payload.methodLabel = label;
@@ -39,6 +56,11 @@ export function signInPayload(provider, proxy, methodLabel = null, account = nul
   // service looks the directory up and verifies its ledger.
   const claim = signInAccount(account);
   if (claim) payload.account = claim;
+  // The answers the chosen method asked for (a team's site, an enterprise VPC
+  // instance or domain, a Personal Access Token). They travel once, with the
+  // request, and the flow never returns them.
+  const answers = signInInputs(inputs);
+  if (answers) payload.inputs = answers;
   return payload;
 }
 
