@@ -125,12 +125,15 @@ test("the two states are worded apart in all four languages", () => {
   const view = mergeProviderSources({ local: LOCAL, magpie: ["codex", "cursor", "mystery-ai"], plugins: PLUGINS });
   const map = byId(view);
 
-  // (a) a browser method was found, but the flow is not verified here.
+  // (a) a browser method was found. The card says what was found and invites a
+  // try; it never claims the flow is unverified, because the plugin can never
+  // learn the outcome of an attempt.
   for (const provider of [map.codex, map.cursor]) {
     expect(provider.browserMethod).toBe(true);
     expect(provider.capability.state).toBe("pending");
     expect(provider.capability.reason.en).toContain("browser sign-in method");
-    expect(provider.capability.reason.en).toContain("has not verified");
+    expect(provider.capability.reason.en).toContain("try it directly");
+    expect(provider.capability.reason.en).not.toMatch(/not verified|unverified/i);
     for (const lang of LANGS) expect(provider.capability.reason[lang]).toBeTruthy();
   }
 
@@ -160,9 +163,10 @@ test("an unavailable plugin scan degrades to the first layer with no false claim
       expect(provider.authMethods).toEqual([]);
       expect(provider.pluginPackage).toBeNull();
     }
-    // A magpie-only card keeps its original "not verified" wording, which does
-    // not claim that no browser method exists.
-    expect(map["mystery-ai"].capability.reason.en).toContain("has not verified its browser sign-in method");
+    // A magpie-only card names the absence of a browser method, which is a fact
+    // about the installed plugins, not a claim about verification.
+    expect(map["mystery-ai"].capability.reason.en).toContain("has no browser sign-in method");
+    expect(map["mystery-ai"].capability.reason.en).not.toMatch(/not verified|unverified/i);
     expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0 });
   }
 });
@@ -179,7 +183,7 @@ test("a failed plugin scan is worded as a failure, not as an unverified flow", (
   for (const provider of [map.codex, map["mystery-ai"]]) {
     expect(provider.capability.reason.en).toContain("The installed-plugin scan failed");
     expect(provider.capability.reason.en).toContain("dirent is not defined");
-    expect(provider.capability.reason.en).not.toContain("has not verified");
+    expect(provider.capability.reason.en).not.toMatch(/not verified|unverified/i);
     for (const lang of LANGS) {
       expect(provider.capability.reason[lang]).toBeTruthy();
       expect(provider.capability.reason[lang]).toContain("dirent is not defined");
@@ -201,7 +205,7 @@ test("a failed plugin scan is worded as a failure, not as an unverified flow", (
     magpie: ["mystery-ai"],
     plugins: { available: false, providers: [] },
   }));
-  expect(never["mystery-ai"].capability.reason.en).toContain("has not verified its browser sign-in method");
+  expect(never["mystery-ai"].capability.reason.en).toContain("has no browser sign-in method");
 });
 
 test("a plugin-only provider gets a fifth-presence card with its derived methods", () => {
@@ -247,9 +251,9 @@ test("a plugin-only provider gets a fifth-presence card with its derived methods
   expect(PROVIDER_PRESENCES).toContain("plugin-only");
 });
 
-// A plugin-only provider with a browser-labelled method keeps the same honest
-// wording as everywhere else and becomes signable through its own entry id.
-test("a plugin-only provider with a browser method says the flow is not verified", () => {
+// A plugin-only provider with a browser-labelled method keeps the same wording
+// as everywhere else and becomes signable through its own entry id.
+test("a plugin-only provider with a browser method names the method, not a verification state", () => {
   const plugins = {
     available: true,
     providers: [
@@ -265,7 +269,7 @@ test("a plugin-only provider with a browser method says the flow is not verified
   expect(loomy.signInProvider).toBe("loomy");
   expect(providerCanSignIn(loomy)).toBe(true);
   expect(loomy.capability.reason.en).toContain("browser sign-in method");
-  expect(loomy.capability.reason.en).toContain("has not verified");
+  expect(loomy.capability.reason.en).not.toMatch(/not verified|unverified/i);
   for (const lang of LANGS) expect(loomy.capability.reason[lang]).toBeTruthy();
 });
 

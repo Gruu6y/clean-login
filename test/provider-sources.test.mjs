@@ -155,8 +155,10 @@ test("case b: a magpie-only provider has a card, no local fields and an honest r
   expect(card.presence).toBe("magpie-only");
   expect(card.sources).toEqual({ local: false, magpie: true });
   expect(card.capability.state).toBe("pending");
-  expect(card.capability.reason.en).toContain("has not verified its browser sign-in method");
-  expect(card.presenceNote.en).toContain("has not verified its browser sign-in method");
+  expect(card.capability.reason.en).toContain("has no browser sign-in method");
+  // Without a plugin scan the presence note repeats the same fact: the reason
+  // and the note are the same sentence in that case.
+  expect(card.presenceNote.en).toContain("has no browser sign-in method");
   for (const lang of ["zh-Hans", "zh-Hant", "ja"]) {
     expect(card.capability.reason[lang]).toBeTruthy();
     expect(card.presenceNote[lang]).toBeTruthy();

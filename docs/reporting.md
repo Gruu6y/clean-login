@@ -1,9 +1,8 @@
 # Reporting a problem from a provider card
 
 Every card in the providers grid carries one quiet control: **报告问题** (Report a
-problem). It exists because the honest states on those cards — `pending`,
-`blocked`, "this flow has not been verified in Clean Login yet" — are exactly
-the ones a user hits first, and until now there was no way to tell us.
+problem). It exists because a card is often the first place a user notices that
+something does not work, and until now there was no way to tell us.
 
 The goal is that reporting costs a few clicks and no writing: the body is
 already written, the title is already written, and the user only presses
