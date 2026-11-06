@@ -54,17 +54,54 @@ function selectionOf(regions) {
   return EMPTY_SELECTION;
 }
 
+// A proxy name is free text the operator types, and in practice it is where
+// the exit tags live (`R2-1|香港-NF|HKT家宽`). The bar offers a short curated
+// list instead of parsing the names: whether an exit is residential or static
+// is exactly what decides if an account is safe to sign in on, so those tags
+// earn a dedicated filter. Matching is a case-insensitive substring test
+// because a name may spell the same tag in different case (`NF` / `nf`).
+export const KEYWORD_TAGS = Object.freeze(["家宽", "静态"]);
+
+export function proxyName(proxy = {}) {
+  return typeof proxy?.name === "string" ? proxy.name : "";
+}
+
+export function hasKeyword(proxy, keyword) {
+  if (typeof keyword !== "string" || keyword === "") return false;
+  return proxyName(proxy).toLowerCase().includes(keyword.toLowerCase());
+}
+
+// Keyword counts in the curated order, so the chips never reshuffle as the
+// list changes. A keyword with no match is still returned with a zero count;
+// the page decides whether to show it.
+export function distinctKeywords(proxies = [], keywords = KEYWORD_TAGS) {
+  const list = Array.isArray(proxies) ? proxies : [];
+  const wanted = Array.isArray(keywords) ? keywords : [];
+  return wanted
+    .filter((keyword) => typeof keyword === "string" && keyword !== "")
+    .map((keyword) => ({
+      keyword,
+      count: list.filter((proxy) => proxy && hasKeyword(proxy, keyword)).length,
+    }));
+}
+
 export function filterProxies(
   proxies = [],
-  { regions = [], minLatency = null, maxLatency = null } = {},
+  { regions = [], keywords = [], minLatency = null, maxLatency = null } = {},
 ) {
   const selected = selectionOf(regions);
+  const chosen = selectionOf(keywords);
   const min = latencyBound(minLatency);
   const max = latencyBound(maxLatency);
   const latencyFilter = min !== null || max !== null;
   return (Array.isArray(proxies) ? proxies : []).filter((proxy) => {
     if (!proxy) return false;
     if (selected.size > 0 && !selected.has(regionKey(proxy))) return false;
+    // Keywords are an OR group (any selected tag matches) that ANDs with the
+    // other filters, mirroring the regions.
+    if (chosen.size > 0 && ![...chosen].some((keyword) => hasKeyword(proxy, keyword))) {
+      return false;
+    }
     if (latencyFilter) {
       // Only real numeric latencies participate. With a bound set, a row whose
       // latency is null/unknown is excluded rather than passing as 0.

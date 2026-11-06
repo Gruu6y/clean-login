@@ -6,9 +6,13 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  KEYWORD_TAGS,
+  distinctKeywords,
   distinctRegions,
   filterProxies,
+  hasKeyword,
   latencyBound,
+  proxyName,
   regionKey,
 } from "../ui/proxy-filter.js";
 
@@ -85,6 +89,72 @@ test("latencyBound ignores empty and nonsense input", () => {
   expect(latencyBound(45.5)).toBe(45.5);
 });
 
+// The exit tags an operator types are only ever in the name, so the keyword
+// filter reads the name. These fixtures mirror the real list (R1-1|香港-NF|HKT家宽).
+const tagged = [
+  { id: "k1", name: "R1-1|香港-NF|HKT家宽", region: "中国/香港", latency: 100 },
+  { id: "k2", name: "R2-1|台湾-NF|HKT家宽", region: "中国/台湾", latency: 200 },
+  { id: "k3", name: "R3-1|日本-NF|静态", region: "日本/东京", latency: 300 },
+  { id: "k4", name: "R4-1|美国-NF|原生", region: "美国/加利福尼亚", latency: 400 },
+  { id: "k5", name: "R5-1|nf|家宽", region: "美国/加利福尼亚", latency: 500 },
+  { id: "k6", region: "", latency: null },
+];
+
+test("hasKeyword reads the name and ignores case", () => {
+  expect(proxyName({ name: "R1-1|HKT家宽" })).toBe("R1-1|HKT家宽");
+  expect(proxyName({})).toBe("");
+  expect(proxyName()).toBe("");
+  expect(hasKeyword({ name: "R1-1|香港-NF|HKT家宽" }, "家宽")).toBe(true);
+  expect(hasKeyword({ name: "R1-1|香港-NF|HKT家宽" }, "静态")).toBe(false);
+  // NF and nf are the same tag in practice, so the match must ignore case.
+  expect(hasKeyword({ name: "R5-1|nf|家宽" }, "NF")).toBe(true);
+  expect(hasKeyword({ name: "" }, "家宽")).toBe(false);
+  expect(hasKeyword({}, "家宽")).toBe(false);
+  // A missing name or keyword never throws and never matches.
+  expect(hasKeyword(undefined, "家宽")).toBe(false);
+  expect(hasKeyword({ name: "家宽" }, "")).toBe(false);
+  expect(hasKeyword({ name: "家宽" }, undefined)).toBe(false);
+});
+
+test("distinctKeywords counts each curated tag in the declared order", () => {
+  expect(distinctKeywords(tagged)).toEqual([
+    { keyword: "家宽", count: 3 },
+    { keyword: "静态", count: 1 },
+  ]);
+  // A zero count is still returned; the page decides whether to render it.
+  expect(distinctKeywords([])).toEqual([
+    { keyword: "家宽", count: 0 },
+    { keyword: "静态", count: 0 },
+  ]);
+  expect(distinctKeywords()).toEqual([
+    { keyword: "家宽", count: 0 },
+    { keyword: "静态", count: 0 },
+  ]);
+  expect(Object.isFrozen(KEYWORD_TAGS)).toBe(true);
+});
+
+test("keywords are an OR group that ANDs with regions and latency", () => {
+  expect(filterProxies(tagged, { keywords: ["家宽"] }).map((p) => p.id)).toEqual(["k1", "k2", "k5"]);
+  expect(filterProxies(tagged, { keywords: ["静态"] }).map((p) => p.id)).toEqual(["k3"]);
+  // Two selected tags are a union, not an intersection.
+  expect(filterProxies(tagged, { keywords: ["家宽", "静态"] }).map((p) => p.id)).toEqual([
+    "k1",
+    "k2",
+    "k3",
+    "k5",
+  ]);
+  // An unknown tag matches nothing rather than everything.
+  expect(filterProxies(tagged, { keywords: ["不存在"] }).map((p) => p.id)).toEqual([]);
+  // Keywords combine with the region and latency filters.
+  expect(
+    filterProxies(tagged, { keywords: ["家宽"], regions: ["美国/加利福尼亚"] }).map((p) => p.id),
+  ).toEqual(["k5"]);
+  expect(filterProxies(tagged, { keywords: ["家宽"], minLatency: 150 }).map((p) => p.id)).toEqual([
+    "k2",
+    "k5",
+  ]);
+});
+
 // The filter bar is asserted against the real markup, not against indentation.
 // `htmlDivById` returns the outer HTML of the first <div> carrying the id, with
 // nested divs balanced. `jsFunctionBody` returns a top-level function's body
@@ -147,37 +217,56 @@ function jsFunctionBody(source, name) {
 test("the filter bar is wired to the pure helpers and every chip is a button", () => {
   const renderList = jsFunctionBody(app, "renderProxies");
   const renderChips = jsFunctionBody(app, "renderFilterChips");
+  const renderKeywords = jsFunctionBody(app, "renderKeywordChips");
   const reset = jsFunctionBody(app, "resetProxyFilters");
   expect(renderList).not.toBe("");
   expect(renderChips).not.toBe("");
+  expect(renderKeywords).not.toBe("");
   expect(reset).not.toBe("");
 
-  // The list uses the pure filter; the chips come from the pure region helper.
+  // The list uses the pure filter; the chips come from the pure helpers.
   expect(renderList).toContain("filterProxies(proxies, proxyFilter)");
   expect(renderList).toContain("renderFilterChips()");
   expect(renderChips).toContain("distinctRegions(proxies)");
   expect(renderChips).toContain('byId("filter-regions")');
+  // The keyword chips have their own function, so each factory keeps exactly
+  // the two buttons it owns: the "All" chip and one tile per value.
+  expect(renderChips).toContain("renderKeywordChips()");
+  expect(renderKeywords).toContain("distinctKeywords(proxies)");
+  expect(renderKeywords).toContain('byId("filter-keywords")');
+  expect(renderKeywords).toContain('byId("filter-keyword-group")');
 
-  // Exactly two button factories: the "All" chip and one region chip. Both are
-  // <button type="button"> and both are appended to the #filter-regions wrap.
+  // Exactly two button factories per group. All of them are
+  // <button type="button"> appended to their group's chip wrap.
   expect(renderChips.match(/document\.createElement\("button"\)/g) ?? []).toHaveLength(2);
+  expect(renderKeywords.match(/document\.createElement\("button"\)/g) ?? []).toHaveLength(2);
   expect(renderChips).toContain('all.type = "button"');
   expect(renderChips).toContain('chip.type = "button"');
+  expect(renderKeywords).toContain('all.type = "button"');
+  expect(renderKeywords).toContain('chip.type = "button"');
   expect(renderChips).toContain("wrap.append(all)");
   expect(renderChips).toContain("wrap.append(chip)");
+  expect(renderKeywords).toContain("wrap.append(all)");
+  expect(renderKeywords).toContain("wrap.append(chip)");
   expect(renderChips).not.toContain('createElement("a")');
   expect(renderChips).not.toContain('createElement("input")');
   expect(renderChips).not.toContain('type = "submit"');
+  expect(renderKeywords).not.toContain('createElement("a")');
+  expect(renderKeywords).not.toContain('type = "submit"');
 
   expect(reset).toContain("proxyFilter.regions.clear()");
+  expect(reset).toContain("proxyFilter.keywords.clear()");
   expect(reset).toContain('byId("filter-latency-min").value = ""');
   expect(reset).toContain('byId("filter-latency-max").value = ""');
   expect(reset).toContain("renderProxies()");
 
   const filterBar = htmlDivById(html, "proxy-filters");
   expect(filterBar).not.toBe("");
-  // The chip container is empty markup: every chip is built as a button in JS.
+  // The chip containers are empty markup: every chip is built as a button in JS.
   expect(filterBar).toMatch(/<div class="filter-chips" id="filter-regions"><\/div>/);
+  expect(filterBar).toMatch(/<div class="filter-chips" id="filter-keywords"><\/div>/);
+  expect(filterBar).toContain('id="filter-keyword-label"');
+  expect(filterBar).toContain('id="filter-keyword-group"');
   expect(filterBar).toContain('id="filter-latency-min"');
   expect(filterBar).toContain('id="filter-latency-max"');
   expect(filterBar).toContain('id="filter-count"');
@@ -199,4 +288,5 @@ test("filter state is in memory, never localStorage", () => {
   expect(app).not.toContain("localStorage");
   expect(app).not.toContain("sessionStorage");
   expect(app).toContain('regions: new Set()');
+  expect(app).toContain('keywords: new Set()');
 });

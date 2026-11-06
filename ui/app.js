@@ -10,7 +10,7 @@ import {
   proxyFingerprint,
   statusView,
 } from "./proxy-state.js";
-import { distinctRegions, filterProxies } from "./proxy-filter.js";
+import { distinctKeywords, distinctRegions, filterProxies } from "./proxy-filter.js";
 import { isScoreActive, isScoreSettled, scoreView } from "./proxy-score.js";
 import {
   PLUGIN_SCAN_POLL_INTERVAL_MS,
@@ -217,6 +217,8 @@ const messages = {
     scoreCancel: "Close window",
     filterRegionLabel: "Region",
     filterAllRegions: "All",
+    filterKeywordLabel: "Tags",
+    filterAllKeywords: "All",
     filterLatencyLabel: "Latency (ms)",
     filterLatencyMin: "Min",
     filterLatencyMax: "Max",
@@ -567,6 +569,8 @@ const messages = {
     scoreCancel: "关闭窗口",
     filterRegionLabel: "地区",
     filterAllRegions: "全部",
+    filterKeywordLabel: "关键字",
+    filterAllKeywords: "全部",
     filterLatencyLabel: "延迟（毫秒）",
     filterLatencyMin: "最小",
     filterLatencyMax: "最大",
@@ -917,6 +921,8 @@ const messages = {
     scoreCancel: "關閉視窗",
     filterRegionLabel: "地區",
     filterAllRegions: "全部",
+    filterKeywordLabel: "關鍵字",
+    filterAllKeywords: "全部",
     filterLatencyLabel: "延遲（毫秒）",
     filterLatencyMin: "最小",
     filterLatencyMax: "最大",
@@ -1267,6 +1273,8 @@ const messages = {
     scoreCancel: "ウィンドウを閉じる",
     filterRegionLabel: "地域",
     filterAllRegions: "すべて",
+    filterKeywordLabel: "タグ",
+    filterAllKeywords: "すべて",
     filterLatencyLabel: "レイテンシ（ミリ秒）",
     filterLatencyMin: "最小",
     filterLatencyMax: "最大",
@@ -1489,7 +1497,7 @@ let proxies = [];
 const rowTests = new Map();
 // Filter state is per document and never persisted: magpie mounts the page in
 // an opaque-origin sandbox frame where web storage is not available.
-const proxyFilter = { regions: new Set(), minLatency: "", maxLatency: "" };
+const proxyFilter = { regions: new Set(), keywords: new Set(), minLatency: "", maxLatency: "" };
 let scoreJob = null;
 let scoreStarting = false;
 let scoreStartingId = "";
@@ -1666,6 +1674,7 @@ function applyText() {
   byId("col-checked").textContent = text.colChecked;
   byId("col-score").textContent = text.colScore;
   byId("filter-region-label").textContent = text.filterRegionLabel;
+  byId("filter-keyword-label").textContent = text.filterKeywordLabel;
   byId("filter-latency-label").textContent = text.filterLatencyLabel;
   byId("filter-latency-min").placeholder = text.filterLatencyMin;
   byId("filter-latency-max").placeholder = text.filterLatencyMax;
@@ -2111,10 +2120,60 @@ function renderFilterChips() {
     });
     wrap.append(chip);
   }
+  renderKeywordChips();
+}
+
+// Keyword chips: the proxy name is free text and it is where the operator's
+// exit tags actually live (`R2-1|香港-NF|HKT家宽`). The curated list comes from
+// proxy-filter.js and only keywords matching at least one proxy are shown, so
+// the bar never offers a filter that can only ever return nothing; the group
+// hides itself entirely when nothing matches.
+function renderKeywordChips() {
+  const wrap = byId("filter-keywords");
+  const group = byId("filter-keyword-group");
+  wrap.textContent = "";
+  const keywords = distinctKeywords(proxies).filter((item) => item.count > 0);
+  const available = new Set(keywords.map((item) => item.keyword));
+  for (const keyword of [...proxyFilter.keywords]) {
+    if (!available.has(keyword)) proxyFilter.keywords.delete(keyword);
+  }
+  group.hidden = keywords.length === 0;
+  if (keywords.length === 0) return;
+  const all = document.createElement("button");
+  all.type = "button";
+  all.className = `filter-chip filter-chip-all${proxyFilter.keywords.size === 0 ? " is-active" : ""}`;
+  all.setAttribute("aria-pressed", String(proxyFilter.keywords.size === 0));
+  all.textContent = text.filterAllKeywords;
+  all.addEventListener("click", () => {
+    proxyFilter.keywords.clear();
+    renderProxies();
+  });
+  wrap.append(all);
+  for (const { keyword, count } of keywords) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    const selected = proxyFilter.keywords.has(keyword);
+    chip.className = `filter-chip${selected ? " is-active" : ""}`;
+    chip.dataset.keyword = keyword;
+    chip.setAttribute("aria-pressed", String(selected));
+    const label = document.createElement("span");
+    label.textContent = keyword;
+    const badge = document.createElement("span");
+    badge.className = "filter-chip-count";
+    badge.textContent = String(count);
+    chip.append(label, badge);
+    chip.addEventListener("click", () => {
+      if (proxyFilter.keywords.has(keyword)) proxyFilter.keywords.delete(keyword);
+      else proxyFilter.keywords.add(keyword);
+      renderProxies();
+    });
+    wrap.append(chip);
+  }
 }
 
 function resetProxyFilters() {
   proxyFilter.regions.clear();
+  proxyFilter.keywords.clear();
   proxyFilter.minLatency = "";
   proxyFilter.maxLatency = "";
   byId("filter-latency-min").value = "";
