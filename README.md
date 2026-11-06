@@ -1,12 +1,12 @@
-# Clean Login · 干净登录
+# Magpie Clean Login · 干净登录
 
-**One page in [magpie](https://usemagpie.ai) to manage your proxy exits and your provider sign-ins — each account signed in through its own clean browser.**
+**Magpie Clean Login (CL · 干净登录) is an unofficial [magpie](https://usemagpie.ai) plugin for provider sign-ins: one page to manage proxy exits, where every account signs in through its own isolated browser identity and its own chosen proxy. The canonical repository is [github.com/Gruu6y/magpie-clean-login](https://github.com/Gruu6y/magpie-clean-login).**
 
 Every account gets its own browser profile, its own pinned fingerprint and the proxy you pick for it. The sign-in page never opens in your everyday browser, and two accounts of the same provider never look like the same machine.
 
-> **Unofficial plugin.** Clean Login is built and maintained here, at [Gruu6y/clean-login](https://github.com/Gruu6y/clean-login). It is **not** a package published by `magpie-community`, and nobody has reviewed it but you. Read the code, open an issue, send a pull request — all three are welcome.
+> **Unofficial plugin.** Built and maintained here, at [Gruu6y/magpie-clean-login](https://github.com/Gruu6y/magpie-clean-login). It is **not** a package published by `magpie-community`, and nobody has reviewed it but you. Read the code, open an issue, send a pull request — all three are welcome.
 
-<sub>中文简介：在一个页面里管理代理出口和各家供应商的登录。每个账号都用自己的浏览器身份、固定的浏览器指纹，以及你指定的代理完成登录 —— 登录页不会进入你日常用的浏览器，同一个供应商的两个账号也不会被看成同一台机器。</sub>
+<sub>中文简介：Magpie Clean Login（CL，干净登录）是 magpie 的非官方页面插件，用来在一个页面里管理代理出口和各家供应商的登录，仓库地址是 github.com/Gruu6y/magpie-clean-login。每个账号都用自己的浏览器身份、固定的浏览器指纹，以及你指定的代理完成登录 —— 登录页不会进入你日常用的浏览器，同一个供应商的两个账号也不会被看成同一台机器。</sub>
 
 ---
 
@@ -81,7 +81,7 @@ Run `bun bin/clean-login.mjs help` for the full command list. A remote service (
 
 ## Something wrong?
 
-Open an [issue](https://github.com/Gruu6y/clean-login/issues) and say what you expected, what happened, and which provider or proxy was involved. A screenshot of the message is worth a lot. Please do not paste real tokens or proxy passwords into an issue.
+Open an [issue](https://github.com/Gruu6y/magpie-clean-login/issues) and say what you expected, what happened, and which provider or proxy was involved. A screenshot of the message is worth a lot. Please do not paste real tokens or proxy passwords into an issue.
 
 Pull requests are welcome. [`bun test`](package.json) runs the whole suite; a change without a test is a change nobody can trust later.
 

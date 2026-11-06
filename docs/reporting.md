@@ -33,7 +33,7 @@ cannot: hand a finished URL to the operating system.
 2. **The page cannot widen what gets launched.** `POST /api/report/open` is the
    only route that spawns anything, and it re-checks the URL against
    `isAllowedIssueUrl`: `https:`, host `github.com`, path
-   `/Gruu6y/clean-login/issues/new`, no userinfo. Everything else is a 400 and
+   `/Gruu6y/magpie-clean-login/issues/new`, no userinfo. Everything else is a 400 and
    nothing is spawned. The URL is passed as a single argv entry — never through
    a shell — so `&` in a query string cannot become another command.
 3. **Nothing is posted automatically.** The service opens the GitHub form with

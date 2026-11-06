@@ -1,7 +1,7 @@
 // The reload failure this covers, verbatim from magpie's app.log:
 //
 //   [clean-login] port 3492 is in use; retrying in 1000ms (attempt 13)
-//   plugin github:Gruu6y/clean-login didn't load:
+//   plugin github:Gruu6y/magpie-clean-login didn't load:
 //     Error: Failed to start server. Is port 3492 in use?
 //
 // magpie loads the replacement plugin in a new host process while the old one

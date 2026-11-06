@@ -52,8 +52,8 @@ test("ships every file the manifest names", () => {
 test("declares a standalone repository the topic channel can find", () => {
   expect(pkg.license).toBe("MIT");
   expect(pkg.repository.type).toBe("git");
-  expect(pkg.repository.url).toBe("git+https://github.com/Gruu6y/clean-login.git");
-  expect(pkg.bugs.url).toBe("https://github.com/Gruu6y/clean-login/issues");
+  expect(pkg.repository.url).toBe("git+https://github.com/Gruu6y/magpie-clean-login.git");
+  expect(pkg.bugs.url).toBe("https://github.com/Gruu6y/magpie-clean-login/issues");
   expect(pkg.keywords).toContain("magpie-plugin");
 });
 
