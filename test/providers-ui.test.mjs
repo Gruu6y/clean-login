@@ -8,7 +8,6 @@ import {
   PLUGIN_SCAN_POLL_MAX_ATTEMPTS,
   localizedText,
   providerCanSignIn,
-  providerStatusView,
   shouldPollPluginScan,
 } from "../ui/provider-state.js";
 
@@ -19,7 +18,6 @@ const html = readFileSync(join(root, "ui", "index.html"), "utf8");
 test("the Provider tab renders cards from the Host bootstrap registry", () => {
   expect(app).toContain("renderProviders(providers)");
   expect(app).toContain("function providerCard(provider)");
-  expect(app).toContain("providerStatusView(provider, text)");
   expect(app).toContain("localizedText(provider.description, langKey)");
   expect(app).toContain("localizedText(provider.capability?.reason, langKey)");
   expect(html).toContain('id="providers-list"');
@@ -27,20 +25,18 @@ test("the Provider tab renders cards from the Host bootstrap registry", () => {
   expect(html).not.toMatch(/mock|preview-badge|data-add/i);
 });
 
-test("pending providers show an honest status and reason", () => {
+test("no card renders a verification state", () => {
+  // A badge that can never change is noise: nothing a user does can move a card
+  // off "pending", because the plugin has no channel to learn the outcome of an
+  // attempt. The card therefore carries no state at all.
+  expect(app).not.toContain("providerStatusView");
+  expect(app).not.toContain("provider-status");
+  expect(html).not.toContain("provider-status");
   for (const provider of PROVIDERS) {
-    const view = providerStatusView(provider, {
-      providerPending: "Pending verification",
-      providerReady: "Ready",
-      providerBlocked: "Blocked",
-    });
-    expect(view.state).toBe("pending");
-    expect(view.label).toBe("Pending verification");
-    expect(localizedText(provider.capability.reason, "en")).toContain("not been verified");
-    for (const lang of ["zh-Hans", "zh-Hant", "ja"]) {
-      expect(localizedText(provider.capability.reason, lang)).toBeTruthy();
-    }
+    expect(Object.keys(provider.capability.reason)).toEqual([]);
   }
+  // A card with no reason appends no reason paragraph.
+  expect(app).toContain("if (reason.textContent) card.append(reason);");
 });
 
 test("the add entry gate is a browser method plus a plugin entry id, never readiness", () => {

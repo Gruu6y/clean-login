@@ -440,40 +440,6 @@ main { flex: 1; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.provider-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-left: auto;
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.provider-status::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: currentColor;
-}
-.provider-status.pending {
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  color: var(--warn);
-}
-.provider-status.ready {
-  background: color-mix(in srgb, var(--ok) 12%, transparent);
-  color: var(--ok);
-}
-.provider-status.blocked {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
-}
 .provider-description {
   margin: 0;
   color: var(--muted);
@@ -616,14 +582,6 @@ main { flex: 1; }
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 650;
-}
-.signin-unverified {
-  margin: 0 0 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--surface-soft);
-  color: var(--muted);
-  font-size: 12px;
 }
 .signin-notice {
   margin: 12px 0 0;
@@ -1146,17 +1104,6 @@ main { flex: 1; }
 
 .account-name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .account-name-line strong { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.unverified-tag {
-  display: inline-block;
-  flex: none;
-  padding: 0 5px;
-  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line));
-  border-radius: 999px;
-  color: var(--warn);
-  font-size: 10px;
-  line-height: 1.5;
-  vertical-align: 1px;
-}
 
 .account-toolbar {
   display: flex;

@@ -140,11 +140,13 @@ test("the two states are worded apart in all four languages", () => {
   expect(map["mystery-ai"].capability.reason.en).toContain("No browser sign-in method was found");
   for (const lang of LANGS) expect(map["mystery-ai"].capability.reason[lang]).toBeTruthy();
 
-  // The local registry's curated reason is preserved when the plugin layer
-  // finds no browser method for it.
+  // The local registry writes no verification reason at all. A card whose
+  // plugin layer found nothing is left with only its description: a sentence
+  // saying "not verified yet" would be a claim the plugin can never retract.
   const claude = map.claude;
   expect(claude.browserMethod).toBe(false);
-  expect(claude.capability.reason.en).toContain("Claude");
+  expect(claude.capability.reason).toEqual({});
+  expect(claude.description.en).toContain("Claude");
 });
 
 test("an unavailable plugin scan degrades to the first layer with no false claims", () => {
