@@ -1954,8 +1954,20 @@ function proxyRow(proxy) {
   region.className = "proxy-region";
   region.textContent = proxy.region || text.unknown;
   if (proxy.exitIp) {
+    // The exit IP must stay readable: an ellipsized `111.24…` is useless for
+    // telling exits apart. The label and the IP are separate spans so a narrow
+    // column wraps between them instead of clipping the address, and the full
+    // value is also on the tooltip.
     const exit = document.createElement("small");
-    exit.textContent = `${text.exitIp} ${proxy.exitIp}`;
+    exit.className = "proxy-region-exit";
+    exit.title = `${text.exitIp} ${proxy.exitIp}`;
+    const label = document.createElement("span");
+    label.className = "proxy-region-exit-label";
+    label.textContent = text.exitIp;
+    const ip = document.createElement("span");
+    ip.className = "proxy-region-exit-ip";
+    ip.textContent = proxy.exitIp;
+    exit.append(label, document.createTextNode(" "), ip);
     region.append(exit);
   }
 
