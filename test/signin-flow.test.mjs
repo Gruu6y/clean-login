@@ -497,6 +497,114 @@ test("the answers the page collected reach authorize()", async () => {
   await controller.whenSettled();
   expect(controller.status().state).toBe("done");
 });
+// A plugin whose sign-in is a one-time code it sends itself (Loomy's SMS
+// code): no URL, no browser, and the callback only completes once the caller
+// hands the code back through submitCode().
+function codeMethod({ instructions = "A code was sent to 138****0000.", callback } = {}) {
+  return {
+    type: "oauth",
+    label: "Provider phone code",
+    authorize: async () => ({ url: "", instructions, method: "code", callback }),
+  };
+}
+
+test("a code flow waits for the code, opens no browser, and writes back on submit", async () => {
+  const seen = [];
+  const { env, clientCalls, state, controller } = await harness({
+    methods: [
+      codeMethod({
+        callback: async (code) => {
+          seen.push(code);
+          return success();
+        },
+      }),
+    ],
+  });
+  const started = await controller.startSignIn({ provider: "workbuddy" });
+  // No browser: the flow is honest that it is waiting for the user's code.
+  expect(started.url).toBe("");
+  expect(state.launched).toBeNull();
+  expect(controller.status().state).toBe("waiting-code");
+  expect(controller.status().codeRequired).toBe(true);
+  expect(existsSync(join(accountDir(env, "workbuddy", "workbuddy"), SIGNIN_FLOW_MARKER))).toBe(true);
+
+  const submitted = await controller.submitCode("123456");
+  expect(submitted.state).toBe("finishing");
+  await controller.whenSettled();
+
+  expect(seen).toEqual(["123456"]);
+  const flow = controller.status();
+  expect(flow.state).toBe("done");
+  expect(flow.accountKey).toBe("workbuddy");
+  expect(flow.codeRequired).toBe(false);
+  expect(clientCalls).toHaveLength(1);
+  // The public status never carries the code the user typed.
+  expect(JSON.stringify(flow)).not.toContain("123456");
+});
+
+test("a code flow refuses an empty code and a flow that is not waiting for one", async () => {
+  const { controller } = await harness({
+    methods: [codeMethod({ callback: async () => success() })],
+  });
+  await controller.startSignIn({ provider: "workbuddy" });
+  await expect(controller.submitCode("   ")).rejects.toMatchObject({ code: "invalid_code" });
+  await expect(controller.submitCode(undefined)).rejects.toMatchObject({ code: "invalid_code" });
+  // The flow is still waiting; a real code still completes it.
+  await controller.submitCode("123456");
+  await controller.whenSettled();
+  expect(controller.status().state).toBe("done");
+  // Submitting again after it settled is refused, not silently ignored.
+  await expect(controller.submitCode("123456")).rejects.toMatchObject({
+    code: "no_waiting_code",
+  });
+});
+
+test("a browser flow refuses submitCode, because it never waits for a code", async () => {
+  const { controller } = await harness();
+  await controller.startSignIn({ provider: "workbuddy" });
+  await expect(controller.submitCode("123456")).rejects.toMatchObject({
+    code: "no_waiting_code",
+  });
+  await controller.cancel();
+  await controller.whenSettled();
+});
+
+test("a code flow that is cancelled settles and never writes", async () => {
+  const { env, clientCalls, controller } = await harness({
+    methods: [codeMethod({ callback: async () => success() })],
+  });
+  await controller.startSignIn({ provider: "workbuddy" });
+  expect(controller.status().state).toBe("waiting-code");
+  await controller.cancel();
+  await controller.whenSettled();
+  expect(controller.status().state).toBe("cancelled");
+  expect(clientCalls).toHaveLength(0);
+  expect(existsSync(join(accountDir(env, "workbuddy", "workbuddy"), SIGNIN_FLOW_MARKER))).toBe(false);
+});
+
+test("the typed form values reach authorize, and only the declared keys do", async () => {
+  const received = [];
+  const { controller } = await harness({
+    methods: [
+      {
+        type: "oauth",
+        label: "Provider account (form)",
+        prompts: [{ type: "text", key: "phone" }],
+        authorize: async (inputs) => {
+          received.push(inputs);
+          return { url: "https://provider/signin", instructions: "go", method: "auto", callback: async () => success() };
+        },
+      },
+    ],
+  });
+  await controller.startSignIn({
+    provider: "workbuddy",
+    methodInputs: { phone: "13800138000", undeclared: "nope" },
+  });
+  expect(received).toEqual([{ phone: "13800138000" }]);
+  await controller.whenSettled();
+  expect(controller.status().state).toBe("done");
+});
 
 test("an answer the method never asked for is not forwarded", async () => {
   const seen = [];
@@ -558,11 +666,48 @@ test("the flow status never carries the answers", async () => {
   await controller.whenSettled();
 });
 
+test("a method with no prompts still calls authorize the way it always did", async () => {
+  const received = [];
+  const { controller } = await harness({
+    methods: [
+      {
+        type: "oauth",
+        label: "Provider account (browser)",
+        authorize: async (...args) => {
+          received.push(args);
+          return { url: "https://provider/signin", instructions: "go", method: "auto", callback: async () => success() };
+        },
+      },
+    ],
+  });
+  await controller.startSignIn({ provider: "workbuddy", methodInputs: { anything: "x" } });
+  expect(received).toEqual([[]]);
+  await controller.whenSettled();
+});
+
+test("a plugin that returns no url and no code method is still an honest error", async () => {
+  const { controller } = await harness({
+    methods: [
+      {
+        type: "oauth",
+        label: "Provider account (broken)",
+        authorize: async () => ({ url: "", instructions: "nothing", method: "auto", callback: async () => success() }),
+      },
+    ],
+  });
+  await expect(controller.startSignIn({ provider: "workbuddy" })).rejects.toMatchObject({
+    code: "no_url",
+    status: 502,
+  });
+  expect(controller.status().state).toBe("error");
+});
+
 test("the state list covers the whole lifecycle", () => {
   expect(SIGNIN_STATES).toEqual([
     "idle",
     "authorizing",
     "waiting-login",
+    "waiting-code",
     "finishing",
     "done",
     "error",

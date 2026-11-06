@@ -6,6 +6,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   signInActive,
+  signInAwaitingCode,
+  signInCodePayload,
   signInInputs,
   signInMethodLabel,
   signInPayload,
@@ -233,7 +235,7 @@ test("signInProxy sends null for the no-proxy selection", () => {
 });
 
 test("signInActive and signInSettled partition the state machine", () => {
-  for (const state of ["authorizing", "waiting-login", "finishing"]) {
+  for (const state of ["authorizing", "waiting-login", "waiting-code", "finishing"]) {
     expect(signInActive(state)).toBe(true);
     expect(signInSettled(state)).toBe(false);
   }
@@ -244,5 +246,55 @@ test("signInActive and signInSettled partition the state machine", () => {
   for (const state of ["idle", "", undefined]) {
     expect(signInActive(state)).toBe(false);
     expect(signInSettled(state)).toBe(false);
+  }
+});
+
+// A plugin whose sign-in is a one-time code it sends itself: the page must
+// offer the code box and post the code to its own route.
+test("the dialog carries a code step for a plugin that sends a one-time code", () => {
+  const dialog = /<dialog id="signin-dialog"[\s\S]*?<\/dialog>/.exec(html)?.[0] || "";
+  expect(dialog).toContain('id="signin-inputs"');
+  expect(dialog).toContain('id="signin-code-field"');
+  expect(dialog).toContain('id="signin-code"');
+  expect(dialog).toContain('id="signin-code-label"');
+  expect(dialog).toContain('id="signin-submit-code"');
+  expect(dialog).toContain('type="button"');
+  expect(app).toContain("renderSignInInputs(");
+  expect(app).toContain("selectedSignInInputs()");
+  expect(app).toContain("function submitSignInCode()");
+  expect(app).toContain('api("api/signin/code", { method: "POST", body: signInCodePayload(code) })');
+  expect(app).toContain("byId(\"signin-submit-code\").addEventListener");
+  expect(app).toContain("signInAwaitingCode");
+  // The code box only appears while the plugin is waiting for a code.
+  expect(app).toContain("codeField.hidden = !awaitingCode;");
+});
+
+test("signInPayload carries the typed form values, and omits them when empty", () => {
+  const withValues = signInPayload(
+    "loomy",
+    null,
+    null,
+    null,
+    { phone: " 13800138000 ", blank: "   ", nope: 42 },
+  );
+  expect(withValues).toEqual({ provider: "loomy", proxy: null, inputs: { phone: "13800138000" } });
+  for (const inputs of [null, undefined, {}, [], "phone", { phone: "" }, { phone: 42 }]) {
+    expect(signInPayload("loomy", null, null, null, inputs)).toEqual({
+      provider: "loomy",
+      proxy: null,
+    });
+  }
+});
+
+test("signInCodePayload carries only the trimmed code", () => {
+  expect(signInCodePayload(" 123456 ")).toEqual({ code: "123456" });
+  expect(signInCodePayload(null)).toEqual({ code: "" });
+  expect(signInCodePayload(123456)).toEqual({ code: "" });
+});
+
+test("signInAwaitingCode marks exactly the waiting-code state", () => {
+  expect(signInAwaitingCode("waiting-code")).toBe(true);
+  for (const state of ["idle", "authorizing", "waiting-login", "finishing", "done", "error", "cancelled", "", undefined]) {
+    expect(signInAwaitingCode(state)).toBe(false);
   }
 });

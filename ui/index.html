@@ -325,6 +325,11 @@
         <div id="signin-inputs"></div>
         <p class="field-hint" id="signin-inputs-hint" hidden></p>
       </div>
+      <div class="field" id="signin-code-field" hidden>
+        <label for="signin-code" id="signin-code-label">Verification code</label>
+        <input id="signin-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" />
+        <p class="field-hint" id="signin-code-hint" hidden></p>
+      </div>
       <div class="field" id="signin-account-field" hidden>
         <label for="signin-account" id="signin-account-label">Continue with an existing identity</label>
         <select id="signin-account" name="account"></select>
@@ -348,6 +353,7 @@
     <div class="dialog-footer">
       <button class="button quiet" id="signin-cancel" type="button" hidden>Cancel sign-in</button>
       <button class="button" id="signin-close-footer" type="button">Close</button>
+      <button class="button primary" id="signin-submit-code" type="button" hidden>Submit code</button>
       <button class="button primary" id="signin-start" type="button">Start sign-in</button>
     </div>
   </dialog>

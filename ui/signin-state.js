@@ -47,7 +47,6 @@ export function signInInputs(values) {
   }
   return Object.keys(inputs).length > 0 ? inputs : null;
 }
-
 export function signInPayload(provider, proxy, methodLabel = null, account = null, inputs = null) {
   const payload = { provider: String(provider || ""), proxy: signInProxy(proxy) };
   const label = signInMethodLabel(methodLabel);
@@ -64,10 +63,26 @@ export function signInPayload(provider, proxy, methodLabel = null, account = nul
   return payload;
 }
 
+// The body of `POST /api/signin/code`: the one-time code the plugin sent.
+export function signInCodePayload(code) {
+  return { code: typeof code === "string" ? code.trim() : "" };
+}
+
 // A flow is still running until it reaches one of the terminal states. Used to
 // decide whether closing the dialog must cancel the flow first.
 export function signInActive(state) {
-  return state === "authorizing" || state === "waiting-login" || state === "finishing";
+  return (
+    state === "authorizing" ||
+    state === "waiting-login" ||
+    state === "waiting-code" ||
+    state === "finishing"
+  );
+}
+
+// A flow is waiting for the user to type the one-time code the plugin sent.
+// The dialog swaps the browser note for a code box in exactly this state.
+export function signInAwaitingCode(state) {
+  return state === "waiting-code";
 }
 
 // The terminal states the UI must stop polling on.

@@ -23,7 +23,7 @@ import {
   shouldPollPluginScan,
   signInMethodFields,
 } from "./provider-state.js";
-import { signInActive, signInPayload } from "./signin-state.js";
+import { signInActive, signInAwaitingCode, signInCodePayload, signInPayload } from "./signin-state.js";
 import {
   accountCheckPath,
   accountIdentityPath,
@@ -121,10 +121,15 @@ const messages = {
     signInClose: "Close",
     signInStateAuthorizing: "Authorizing…",
     signInStateWaiting: "Waiting for you to finish in the browser…",
+    signInStateWaitingCode: "Waiting for verification code…",
     signInStateFinishing: "Writing the credential into magpie…",
     signInStateDone: "Done",
     signInStateError: "Failed",
     signInStateCancelled: "Cancelled",
+    signInCodePrompt: "A verification code has been sent. Enter it below to complete sign-in.",
+    signInCodeLabel: "Verification code",
+    signInCodeSubmit: "Submit code",
+    signInCodeSubmitting: "Submitting…",
     signInAccountKey: "Account key",
     signInAccountLabel: "Continue with an existing identity",
     signInAccountHint: "This identity keeps its own browser fingerprint. Continuing reuses it instead of drawing a new one.",
@@ -473,10 +478,15 @@ const messages = {
     signInClose: "关闭",
     signInStateAuthorizing: "正在获取登录地址…",
     signInStateWaiting: "等待你在浏览器窗口中完成登录…",
+    signInStateWaitingCode: "等待输入验证码…",
     signInStateFinishing: "正在把凭据写入 magpie…",
     signInStateDone: "已完成",
     signInStateError: "失败",
     signInStateCancelled: "已取消",
+    signInCodePrompt: "验证码已发出，请在下方填写收到的验证码以完成登录。",
+    signInCodeLabel: "验证码",
+    signInCodeSubmit: "提交验证码",
+    signInCodeSubmitting: "正在提交…",
     signInAccountKey: "账号键",
     signInAccountLabel: "沿用已有身份继续登录",
     signInAccountHint: "该身份保留自己的浏览器指纹。沿用时会重用该指纹，而不是重新生成。",
@@ -825,10 +835,15 @@ const messages = {
     signInClose: "關閉",
     signInStateAuthorizing: "正在取得登入網址…",
     signInStateWaiting: "等待你在瀏覽器視窗中完成登入…",
+    signInStateWaitingCode: "等待輸入驗證碼…",
     signInStateFinishing: "正在把憑證寫入 magpie…",
     signInStateDone: "已完成",
     signInStateError: "失敗",
     signInStateCancelled: "已取消",
+    signInCodePrompt: "驗證碼已發出，請在下方填寫收到的驗證碼以完成登入。",
+    signInCodeLabel: "驗證碼",
+    signInCodeSubmit: "提交驗證碼",
+    signInCodeSubmitting: "正在提交…",
     signInAccountKey: "帳號金鑰",
     signInAccountLabel: "沿用現有身分繼續登入",
     signInAccountHint: "這個身分保留自己的瀏覽器指紋。沿用時會重用該指紋，而不是重新產生。",
@@ -1177,10 +1192,15 @@ const messages = {
     signInClose: "閉じる",
     signInStateAuthorizing: "認可を取得しています…",
     signInStateWaiting: "ブラウザーでのログイン完了を待っています…",
+    signInStateWaitingCode: "認証コードの入力を待っています…",
     signInStateFinishing: "認証情報を magpie に書き込んでいます…",
     signInStateDone: "完了",
     signInStateError: "失敗",
     signInStateCancelled: "キャンセル済み",
+    signInCodePrompt: "認証コードを送信しました。ログインを完了するには下に入力してください。",
+    signInCodeLabel: "認証コード",
+    signInCodeSubmit: "コードを送信",
+    signInCodeSubmitting: "送信中…",
     signInAccountKey: "アカウントキー",
     signInAccountLabel: "既存のIDでログインを継続",
     signInAccountHint: "このIDは独自のブラウザ指紋を保持します。継続すると新しい指紋ではなく同じ指紋が使われます。",
@@ -1708,6 +1728,8 @@ function applyText() {
   byId("signin-copy").textContent = text.signInCopy;
   byId("signin-proxy-label").textContent = text.signInProxyLabel;
   byId("signin-method-label").textContent = text.signInMethodLabel;
+  byId("signin-code-label").textContent = text.signInCodeLabel;
+  byId("signin-submit-code").textContent = text.signInCodeSubmit;
   byId("signin-start").textContent = text.signInStart;
   byId("signin-cancel").textContent = text.signInCancel;
   byId("signin-close").setAttribute("aria-label", text.signInClose);
@@ -2735,6 +2757,7 @@ function serverErrorText(error) {
 function signInStateLabel(state) {
   if (state === "authorizing") return text.signInStateAuthorizing;
   if (state === "waiting-login") return text.signInStateWaiting;
+  if (state === "waiting-code") return text.signInStateWaitingCode;
   if (state === "finishing") return text.signInStateFinishing;
   if (state === "done") return text.signInStateDone;
   if (state === "error") return text.signInStateError;
@@ -2765,6 +2788,11 @@ function renderSignIn() {
   } else if (state === "cancelled") {
     statusDetail.textContent = text.signInCancelled;
     statusDetail.hidden = false;
+  } else if (state === "waiting-code") {
+    // The plugin's own instruction ("code sent to 138****0000") when it has
+    // one; the local line only when it did not.
+    statusDetail.textContent = flow?.instructions ? String(flow.instructions) : text.signInCodePrompt;
+    statusDetail.hidden = false;
   } else {
     const warning = state === "waiting-login" ? navigationWarningText(flow?.warning, "signInNavigationWarning") : "";
     statusDetail.textContent = warning;
@@ -2781,11 +2809,28 @@ function renderSignIn() {
     byId("signin-result-key").textContent = "";
   }
 
+  const awaitingCode = signInAwaitingCode(state);
   byId("signin-start").hidden = active || context.busy;
   byId("signin-start").disabled = context.busy;
   byId("signin-start").textContent = context.busy ? text.signInStarting : text.signInStart;
   byId("signin-cancel").hidden = !active;
   byId("signin-cancel").disabled = context.busy;
+  // The code box appears only while the plugin is actually waiting for a code,
+  // and the inputs the user already filled in stop being editable once the
+  // flow owns them.
+  const codeField = byId("signin-code-field");
+  codeField.hidden = !awaitingCode;
+  byId("signin-code").disabled = context.busy;
+  byId("signin-code-hint").hidden = true;
+  byId("signin-submit-code").hidden = !awaitingCode;
+  byId("signin-submit-code").disabled = context.busy;
+  byId("signin-submit-code").textContent = context.busy
+    ? text.signInCodeSubmitting
+    : text.signInCodeSubmit;
+  const inputs = byId("signin-inputs");
+  for (const input of inputs.querySelectorAll("[data-input-key]")) {
+    input.disabled = active || context.busy;
+  }
 }
 
 function renderSignInProxies() {
@@ -3065,7 +3110,7 @@ async function startSignIn() {
   setSignInNotice("");
   renderSignIn();
   try {
-    await api("api/signin", {
+    const result = await api("api/signin", {
       method: "POST",
       body: signInPayload(
         context.provider,
@@ -3077,9 +3122,40 @@ async function startSignIn() {
     });
     if (signInContext !== context) return;
     context.busy = false;
-    // startSignIn answers only after the browser window is open.
-    context.flow = { state: "waiting-login", accountKey: null };
-    setSignInNotice(text.signInOpened);
+    // The service answers as soon as the flow is ready: right after the
+    // browser window opens, or — for a code plugin like Loomy — after it sent
+    // the code and is waiting for the user to type it back. Asking the service
+    // for the real state keeps this honest instead of assuming a browser.
+    const state = typeof result?.flow?.state === "string" ? result.flow.state : "waiting-login";
+    context.flow = { state, accountKey: null, instructions: result?.instructions || "" };
+    setSignInNotice(state === "waiting-code" ? text.signInCodePrompt : text.signInOpened);
+    renderSignIn();
+    startSignInPolling();
+  } catch (error) {
+    if (signInContext !== context) return;
+    context.busy = false;
+    setSignInError(serverErrorText(error));
+    renderSignIn();
+  }
+}
+
+// Hands the one-time code to the waiting flow. The service then runs the
+// plugin's callback; polling picks up the result the same way it does for a
+// browser sign-in.
+async function submitSignInCode() {
+  const context = signInContext;
+  if (!context || context.busy) return;
+  const code = typeof byId("signin-code").value === "string" ? byId("signin-code").value.trim() : "";
+  if (!code) return;
+  context.busy = true;
+  setSignInError("");
+  renderSignIn();
+  try {
+    const data = await api("api/signin/code", { method: "POST", body: signInCodePayload(code) });
+    if (signInContext !== context) return;
+    context.busy = false;
+    if (data?.flow) context.flow = data.flow;
+    byId("signin-code").value = "";
     renderSignIn();
     startSignInPolling();
   } catch (error) {
@@ -3143,6 +3219,10 @@ function cleanupSignInDialog() {
   signInContext = null;
   setSignInNotice("");
   setSignInError("");
+  byId("signin-inputs").textContent = "";
+  byId("signin-code-field").hidden = true;
+  byId("signin-code").value = "";
+  byId("signin-submit-code").hidden = true;
   byId("signin-result").hidden = true;
   byId("signin-result-key").textContent = "";
   byId("signin-status").hidden = true;
@@ -4730,6 +4810,10 @@ byId("signin-method").addEventListener("change", () => {
   if (signInContext) renderSignInInputs(signInContext.card);
 });
 byId("signin-start").addEventListener("click", startSignIn);
+byId("signin-submit-code").addEventListener("click", submitSignInCode);
+byId("signin-code").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") submitSignInCode();
+});
 byId("signin-cancel").addEventListener("click", cancelSignIn);
 byId("signin-close").addEventListener("click", closeSignInDialog);
 byId("signin-close-footer").addEventListener("click", closeSignInDialog);
