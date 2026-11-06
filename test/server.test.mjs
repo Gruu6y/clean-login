@@ -54,6 +54,10 @@ beforeAll(async () => {
       ...process.env,
       MAGPIE_CONFIG_DIR: join(tmp, "magpie-config"),
       MAGPIE_CLEAN_LOGIN_DATA: join(tmp, "data"),
+      // Same rule for the catalogue: point the cache at the temp root so a
+      // test never reads the developer's real ~/.cache/magpie and a machine
+      // with a large market cannot change an expected card count.
+      MAGPIE_CACHE_DIR: join(tmp, "magpie-cache"),
     },
     pluginScanner,
   });
@@ -154,7 +158,7 @@ test("/api/provider-sources merges magpie's list and reports the source", async 
   const view = JSON.parse(res.body).providerSources;
   expect(view.source).toBe("magpie");
   expect(view.magpie).toEqual({ available: true, count: 2 });
-  expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0 });
+  expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0, catalogOnly: 0 });
   const byId = Object.fromEntries(view.providers.map((provider) => [provider.id, provider]));
   expect(byId.codex.presence).toBe("both");
   expect(byId.antigravity.presence).toBe("local-only");
@@ -764,7 +768,9 @@ test("boot carries a good providers:list read through the hash fragment", async 
 test("boot keeps navigating when the bridge has no read", async () => {
   const { went } = await runBoot({ ready: Promise.resolve({ dark: false }) });
   expect(new URL(went).origin).toBe("http://127.0.0.1:3492");
-  expect(providerEnvelope(went)).toEqual({ v: 1, ok: false });
+  // The reason travels with the envelope: "ok: false" alone cannot be told
+  // apart from a throw or a timeout when reading the logs later.
+  expect(providerEnvelope(went)).toEqual({ v: 1, ok: false, kind: "bridge-missing" });
 });
 
 test("boot keeps navigating when providers:list throws", async () => {
@@ -774,7 +780,7 @@ test("boot keeps navigating when providers:list throws", async () => {
     read: async () => { throw new Error("boom"); },
   };
   const { went } = await runBoot(magpie);
-  expect(providerEnvelope(went)).toEqual({ v: 1, ok: false });
+  expect(providerEnvelope(went)).toEqual({ v: 1, ok: false, kind: "threw", error: "boom" });
 });
 
 test("boot forwards an empty providers:list instead of treating it as a failure", async () => {
@@ -798,5 +804,10 @@ test("boot times out a hanging providers:list and still navigates", async () => 
     clearTimeout: () => {},
   };
   const { went } = await runBoot(magpie, { timers });
-  expect(providerEnvelope(went)).toEqual({ v: 1, ok: false });
+  expect(providerEnvelope(went)).toEqual({
+    v: 1,
+    ok: false,
+    kind: "timeout",
+    error: "providers:list timed out",
+  });
 });
