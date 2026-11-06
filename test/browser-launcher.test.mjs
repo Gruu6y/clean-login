@@ -36,6 +36,8 @@ test("the launch input pins the persistent profile and the fingerprint", () => {
   expect(input.launch.user_data_dir).toBe("/profiles/a");
   expect(input.launch.fingerprint).toBe(identity);
   expect(input.launch.canvas_noise).toBe(false);
+  expect(input.launch.enable_cache).toBe(true);
+  expect(input.launch.humanize).toBe(true);
   // No proxy means no proxy and no geoip lookup.
   expect("proxy" in input.launch).toBe(false);
   expect("geoip" in input.launch).toBe(false);
@@ -119,6 +121,8 @@ test("openSignInBrowser passes the pin and the profile to camoufox", async () =>
   });
   expect(calls.launchOptions.fingerprint).toBe(identity);
   expect(calls.launchOptions.canvas_noise).toBe(false);
+  expect(calls.launchOptions.enable_cache).toBe(true);
+  expect(calls.launchOptions.humanize).toBe(true);
   expect(calls.launchOptions.executable_path).toBe(join(dir, "camoufox.exe"));
   expect(calls.newBrowser.persistent_context).toBe(true);
   expect(calls.newBrowser.from_options.user_data_dir).toBe(profileDir);
