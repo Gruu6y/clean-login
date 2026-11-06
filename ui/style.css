@@ -424,6 +424,13 @@ main { flex: 1; }
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
+/* A catalogue card is an offer, not something this machine can use yet, so it
+   reads quieter than a card that works. */
+.provider-origin[data-origin="catalog"] {
+  color: var(--muted);
+  border-color: var(--line-strong);
+}
+
 .provider-name {
   min-width: 0;
   margin: 0;

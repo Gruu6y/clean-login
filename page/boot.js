@@ -94,17 +94,28 @@
   // confirmed on this machine. The value is forwarded as-is and normalized by
   // the service (lib/provider-sources.mjs).
   function readProviders() {
-    const read = window.magpie?.read;
-    if (typeof read !== "function") return Promise.resolve({ v: 1, ok: false });
+    const bridge = window.magpie;
+    const read = bridge?.read;
+    if (typeof read !== "function") {
+      return Promise.resolve({ v: 1, ok: false, kind: "bridge-missing" });
+    }
     let timer;
     return Promise.race([
-      Promise.resolve().then(() => read("providers:list")),
+      Promise.resolve().then(() => read.call(bridge, "providers:list")),
       new Promise((_, reject) => {
         timer = window.setTimeout(() => reject(new Error("providers:list timed out")), 1500);
       }),
     ])
       .then((value) => ({ v: 1, ok: true, value: value ?? null }))
-      .catch(() => ({ v: 1, ok: false }))
+      // The failure reason is carried, not swallowed: "available: false" on its
+      // own cannot be told apart from a bridge that is missing, a read that
+      // threw and a read that never answered.
+      .catch((error) => ({
+        v: 1,
+        ok: false,
+        kind: /timed out/i.test(String(error?.message || "")) ? "timeout" : "threw",
+        error: String(error?.message || error || "unknown").slice(0, 200),
+      }))
       .finally(() => window.clearTimeout?.(timer));
   }
 

@@ -137,7 +137,7 @@ test("an empty magpie list still counts as derived from magpie", () => {
 test("case a: a provider in both sources is normal and carries the local sign-in mode", () => {
   const view = mergeProviderSources({ local: LOCAL, magpie: ["antigravity", "codex", "claude"] });
   expect(view.source).toBe("magpie");
-  expect(view.counts).toEqual({ total: 3, both: 3, localOnly: 0, magpieOnly: 0, pluginOnly: 0 });
+  expect(view.counts).toEqual({ total: 3, both: 3, localOnly: 0, magpieOnly: 0, pluginOnly: 0, catalogOnly: 0 });
   for (const provider of view.providers) {
     expect(provider.presence).toBe("both");
     expect(provider.presenceNote).toBeNull();
@@ -167,7 +167,7 @@ test("case b: a magpie-only provider has a card, no local fields and an honest r
   expect(card.agentId).toBe("mystery-ai");
   expect(card.authHosts).toEqual([]);
   expect(card.callbackPort).toBeNull();
-  expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0 });
+  expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0, catalogOnly: 0 });
 });
 
 test("case c: a local provider magpie omits is annotated, not removed", () => {
@@ -179,7 +179,7 @@ test("case c: a local provider magpie omits is annotated, not removed", () => {
   for (const lang of ["zh-Hans", "zh-Hant", "ja"]) {
     expect(card.presenceNote[lang]).toBeTruthy();
   }
-  expect(view.counts).toEqual({ total: 3, both: 1, localOnly: 2, magpieOnly: 0, pluginOnly: 0 });
+  expect(view.counts).toEqual({ total: 3, both: 1, localOnly: 2, magpieOnly: 0, pluginOnly: 0, catalogOnly: 0 });
 });
 
 test("an unavailable magpie list degrades to the local registry without false claims", () => {
@@ -187,7 +187,7 @@ test("an unavailable magpie list degrades to the local registry without false cl
     const view = mergeProviderSources({ local: LOCAL, magpie });
     expect(view.source).toBe("local");
     expect(view.magpie.available).toBe(false);
-    expect(view.counts).toEqual({ total: LOCAL.length, both: 0, localOnly: 0, magpieOnly: 0, pluginOnly: 0 });
+    expect(view.counts).toEqual({ total: LOCAL.length, both: 0, localOnly: 0, magpieOnly: 0, pluginOnly: 0, catalogOnly: 0 });
     for (const provider of view.providers) {
       expect(provider.presence).toBe("local-unknown");
       // We must not claim magpie lacks a provider when we never read the list.
@@ -242,4 +242,57 @@ test("the merged projection stays public and leak-free", () => {
   // The local projection used here is exactly the public one.
   expect(LOCAL).toEqual(listProviders());
   expect(LOCAL[0]).toEqual(publicProvider(LOCAL[0]));
+});
+
+// The catalogue layer is what makes "scan the user's magpie" true: the cards
+// come from files on the user's machine, so a provider magpie adds later shows
+// up without a release. What it must never do is offer a sign-in entry for a
+// provider whose plugin is not installed.
+test("catalogue providers magpie offers but nothing can sign into become catalog cards", () => {
+  const merged = mergeProviderSources({
+    local: LOCAL,
+    magpie: { ok: true, value: ["Antigravity", "Codex"] },
+    plugins: { available: true, providers: [{ id: "workbuddy-ai", name: "WorkBuddy AI", package: "@magpie-community/opencode-workbuddy-auth", methods: [{ kind: "browser" }] }] },
+    catalog: {
+      available: true,
+      providers: [
+        { id: "workbuddy-ai", name: "WorkBuddy AI", package: "@magpie-community/opencode-workbuddy-auth" },
+        { id: "opencode-zen-free", name: "OpenCode Zen Free", package: "@magpie-community/opencode-zen-auth" },
+      ],
+    },
+  });
+  const catalogCards = merged.providers.filter((item) => item.presence === "catalog");
+  expect(ids(catalogCards)).toEqual(["opencode-zen-free"]);
+  expect(merged.counts.catalogOnly).toBe(1);
+  // An already covered provider must not be listed twice.
+  expect(ids(merged.providers).filter((id) => id === "workbuddy-ai")).toHaveLength(1);
+});
+
+test("a catalog card offers no sign-in entry and says why", () => {
+  const merged = mergeProviderSources({
+    local: [],
+    magpie: { ok: true, value: [] },
+    plugins: { available: true, providers: [] },
+    catalog: { available: true, providers: [{ id: "solo", name: "Solo", package: "pkg" }] },
+  });
+  const card = merged.providers[0];
+  expect(card.presence).toBe("catalog");
+  expect(card.signInProvider).toBeNull();
+  expect(card.authMethods).toEqual([]);
+  expect(card.browserMethod).toBe(false);
+  expect(card.linkOnly).toBe(true);
+  expect(card.pluginPackage).toBe("pkg");
+  expect(card.description["zh-Hans"]).toContain("没有安装");
+});
+
+test("an unavailable catalog adds nothing rather than an empty claim", () => {
+  const merged = mergeProviderSources({
+    local: LOCAL,
+    magpie: { ok: true, value: [] },
+    plugins: { available: true, providers: [] },
+    catalog: { available: false, providers: [] },
+  });
+  expect(merged.providers.every((item) => item.presence !== "catalog")).toBe(true);
+  expect(merged.counts.catalogOnly).toBe(0);
+  expect(merged.catalog).toEqual({ available: false, count: 0 });
 });
