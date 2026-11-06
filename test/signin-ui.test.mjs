@@ -27,11 +27,26 @@ test("the sign-in dialog posts the card's signInProvider to /api/signin", () => 
   expect(app).toContain("selectedSignInMethod()");
   expect(app).toContain("selectedSignInAccount()");
   expect(app).toContain('api("api/signin", {');
-  expect(app).toContain('api("api/signin/cancel", { method: "POST" })');
+  expect(app).toContain('api(signInIsNative(context) ? "api/native-signin/cancel" : "api/signin/cancel", {');
   // The status poll is a GET of the same route.
-  expect(app).toContain('const data = await api("api/signin");');
+  expect(app).toContain('const data = await api(signInIsNative(context) ? "api/native-signin" : "api/signin");');
   // The proxy list is re-read from GET /api/proxies when the dialog opens.
   expect(app).toContain('await api("api/proxies")');
+});
+
+test("a built-in provider's add entry goes through magpie's own command line", () => {
+  // A provider magpie signs in itself has no plugin method to run, and a page
+  // cannot reach magpie's API, so the service drives `magpie accounts add` and
+  // the dialog has to talk to that door instead of the plugin one.
+  expect(app).toContain("signInDoor(");
+  expect(app).toContain('signInDoor(context.provider) === "native"');
+  expect(app).toContain('api("api/native-signin", { method: "POST", body: { agent: context.provider.id } })');
+  expect(app).toContain('api("api/native-signin/paste", { method: "POST", body: { text: code } })');
+  // The native states are folded onto the vocabulary the dialog already
+  // renders, so a paste-back looks exactly like a one-time code.
+  expect(app).toContain("const NATIVE_STATE_ALIAS = {");
+  expect(app).toContain('"paste-required": "waiting-code",');
+  expect(app).toContain("function nativeFlow(flow) {");
 });
 
 test("the dialog is sandbox-safe: type=button controls and no form submission", () => {

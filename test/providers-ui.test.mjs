@@ -9,6 +9,7 @@ import {
   localizedText,
   providerCanSignIn,
   shouldPollPluginScan,
+  signInDoor,
 } from "../ui/provider-state.js";
 
 const root = join(import.meta.dir, "..");
@@ -135,6 +136,59 @@ test("a key-only or local-session provider renders no add entry", () => {
   for (const provider of view.providers) {
     expect(providerCanSignIn(provider)).toBe(false);
   }
+});
+
+test("a built-in provider magpie signs in itself still gets an add entry", () => {
+  // antigravity and friends ship with magpie: there is no plugin to scan, so a
+  // rule that reads only the plugin layer hides the entry on exactly the
+  // providers a user has no other way to add. magpie's own command line is the
+  // door there.
+  const view = mergeProviderSources({
+    local: PROVIDERS.map(publicProvider),
+    magpie: ["antigravity", "codex"],
+    plugins: {
+      available: true,
+      providers: [
+        {
+          id: "codex",
+          package: "@x/codex",
+          methods: [{ type: "api", label: "Codex API key", browser: false, category: "key" }],
+        },
+      ],
+    },
+  });
+  const antigravity = view.providers.find((provider) => provider.id === "antigravity");
+  expect(antigravity.nativeSignIn).toBe(true);
+  expect(signInDoor(antigravity)).toBe("native");
+  expect(providerCanSignIn(antigravity)).toBe(true);
+
+  // A plugin that offers only a key is not quietly turned into a browser
+  // sign-in: the card keeps its no-entry verdict.
+  const codex = view.providers.find((provider) => provider.id === "codex");
+  expect(codex.nativeSignIn).toBe(false);
+  expect(signInDoor(codex)).toBe("none");
+  expect(providerCanSignIn(codex)).toBe(false);
+});
+
+test("a plugin method is the door when one exists, native only as the fallback", () => {
+  const view = mergeProviderSources({
+    local: PROVIDERS.map(publicProvider),
+    magpie: ["antigravity"],
+    plugins: {
+      available: true,
+      providers: [
+        {
+          id: "antigravity",
+          package: "@x/antigravity",
+          methods: [{ type: "oauth", label: "Antigravity (browser)", browser: true, category: "browser" }],
+        },
+      ],
+    },
+  });
+  const card = view.providers.find((provider) => provider.id === "antigravity");
+  expect(card.nativeSignIn).toBe(false);
+  expect(signInDoor(card)).toBe("plugin");
+  expect(providerCanSignIn(card)).toBe(true);
 });
 
 test("no card copy stays prohibitive in any of the four languages", () => {

@@ -22,6 +22,7 @@ import {
   providerCanSignIn,
   shouldPollPluginScan,
   signInMethodFields,
+  signInDoor,
 } from "./provider-state.js";
 import { signInActive, signInAwaitingCode, signInCodePayload, signInPayload } from "./signin-state.js";
 import {
@@ -132,6 +133,9 @@ const messages = {
     signInCodePrompt: "A verification code has been sent. Enter it below to complete sign-in.",
     signInCodeLabel: "Verification code",
     signInCodeSubmit: "Submit code",
+    signInNativePaste: "The page could not come back to magpie on its own. Paste the address it ended on below to finish.",
+    signInNativePasteLabel: "Page address",
+    signInNativeCode: "Confirm this code on the page",
     signInCodeSubmitting: "Submitting…",
     signInAccountKey: "Account key",
     signInAccountLabel: "Continue with an existing identity",
@@ -492,6 +496,9 @@ const messages = {
     signInCodePrompt: "验证码已发出，请在下方填写收到的验证码以完成登录。",
     signInCodeLabel: "验证码",
     signInCodeSubmit: "提交验证码",
+    signInNativePaste: "页面无法自己回到 magpie。请把它最后停留的地址粘贴到下方以完成登录。",
+    signInNativePasteLabel: "页面地址",
+    signInNativeCode: "请在页面上确认这个代码",
     signInCodeSubmitting: "正在提交…",
     signInAccountKey: "账号键",
     signInAccountLabel: "沿用已有身份继续登录",
@@ -852,6 +859,9 @@ const messages = {
     signInCodePrompt: "驗證碼已發出，請在下方填寫收到的驗證碼以完成登入。",
     signInCodeLabel: "驗證碼",
     signInCodeSubmit: "提交驗證碼",
+    signInNativePaste: "頁面無法自己回到 magpie。請把它最後停留的位址貼到下方以完成登入。",
+    signInNativePasteLabel: "頁面位址",
+    signInNativeCode: "請在頁面上確認這個代碼",
     signInCodeSubmitting: "正在提交…",
     signInAccountKey: "帳號金鑰",
     signInAccountLabel: "沿用現有身分繼續登入",
@@ -1212,6 +1222,9 @@ const messages = {
     signInCodePrompt: "認証コードを送信しました。ログインを完了するには下に入力してください。",
     signInCodeLabel: "認証コード",
     signInCodeSubmit: "コードを送信",
+    signInNativePaste: "ページが magpie に戻れませんでした。最後に表示されたアドレスを下に貼り付けて完了してください。",
+    signInNativePasteLabel: "ページのアドレス",
+    signInNativeCode: "ページ上でこのコードを確認してください",
     signInCodeSubmitting: "送信中…",
     signInAccountKey: "アカウントキー",
     signInAccountLabel: "既存のIDでログインを継続",
@@ -2853,6 +2866,13 @@ function renderSignIn() {
   // flow owns them.
   const codeField = byId("signin-code-field");
   codeField.hidden = !awaitingCode;
+  // A native flow can come back asking for the address the page ended on
+  // instead of a code; the same box carries either, with its own label.
+  const pasting = awaitingCode && context.flow?.native && Boolean(context.flow?.paste);
+  byId("signin-code-label").textContent = pasting
+    ? text.signInNativePasteLabel
+    : text.signInCodeLabel;
+  byId("signin-code").setAttribute("inputmode", pasting ? "url" : "numeric");
   byId("signin-code").disabled = context.busy;
   byId("signin-code-hint").hidden = true;
   byId("signin-submit-code").hidden = !awaitingCode;
@@ -3135,6 +3155,40 @@ function renderSignInPreselection() {
   hint.textContent = text.signInAccountHint;
 }
 
+// A provider magpie signs in itself (a built-in such as Antigravity) has no
+// plugin method to run, so the service drives magpie's own command line
+// instead. Its states are folded onto the vocabulary the dialog already
+// renders, so the entry behaves the same way whatever door it came through.
+const NATIVE_STATE_ALIAS = {
+  starting: "authorizing",
+  waiting: "waiting-login",
+  "paste-required": "waiting-code",
+};
+
+function nativeFlow(flow) {
+  if (!flow || typeof flow !== "object") return null;
+  const code = typeof flow.code === "string" ? flow.code : "";
+  const paste = typeof flow.paste === "string" ? flow.paste : "";
+  return {
+    state: NATIVE_STATE_ALIAS[flow.state] || flow.state || "idle",
+    native: true,
+    paste,
+    code,
+    url: typeof flow.url === "string" ? flow.url : "",
+    error: typeof flow.error === "string" ? flow.error : "",
+    instructions: code
+      ? `${text.signInNativeCode}: ${code}`
+      : paste
+        ? text.signInNativePaste
+        : "",
+    accountKey: null,
+  };
+}
+
+function signInIsNative(context) {
+  return Boolean(context?.flow?.native);
+}
+
 async function startSignIn() {
   const context = signInContext;
   if (!context || context.busy) return;
@@ -3143,18 +3197,31 @@ async function startSignIn() {
   setSignInNotice("");
   renderSignIn();
   try {
-    const result = await api("api/signin", {
-      method: "POST",
-      body: signInPayload(
-        context.provider,
-        selectedSignInProxy(),
-        selectedSignInMethod(),
-        selectedSignInAccount(),
-        selectedSignInInputs(),
-      ),
-    });
+    // Two doors: an installed plugin's own method, or — when there is none —
+    // magpie signing the provider in itself. The second one is what makes a
+    // built-in provider reachable at all.
+    const native = signInDoor(context.provider) === "native";
+    const result = native
+      ? await api("api/native-signin", { method: "POST", body: { agent: context.provider.id } })
+      : await api("api/signin", {
+          method: "POST",
+          body: signInPayload(
+            context.provider,
+            selectedSignInProxy(),
+            selectedSignInMethod(),
+            selectedSignInAccount(),
+            selectedSignInInputs(),
+          ),
+        });
     if (signInContext !== context) return;
     context.busy = false;
+    if (native) {
+      context.flow = nativeFlow(result?.flow) || { state: "authorizing", native: true };
+      setSignInNotice(context.flow.instructions || text.signInOpened);
+      renderSignIn();
+      startSignInPolling();
+      return;
+    }
     // The service answers as soon as the flow is ready: right after the
     // browser window opens, or — for a code plugin like Loomy — after it sent
     // the code and is waiting for the user to type it back. Asking the service
@@ -3184,10 +3251,16 @@ async function submitSignInCode() {
   setSignInError("");
   renderSignIn();
   try {
-    const data = await api("api/signin/code", { method: "POST", body: signInCodePayload(code) });
+    // A native flow that needs the page's own address back gets it through the
+    // same box the one-time code uses: both are "type what the page shows".
+    const data =
+      signInIsNative(context) && context.flow?.paste
+        ? await api("api/native-signin/paste", { method: "POST", body: { text: code } })
+        : await api("api/signin/code", { method: "POST", body: signInCodePayload(code) });
     if (signInContext !== context) return;
     context.busy = false;
-    if (data?.flow) context.flow = data.flow;
+    const flow = signInIsNative(context) ? nativeFlow(data?.flow) : data?.flow;
+    if (flow) context.flow = flow;
     byId("signin-code").value = "";
     renderSignIn();
     startSignInPolling();
@@ -3205,9 +3278,10 @@ async function pollSignIn() {
   if (!context || !byId("signin-dialog").open) return;
   const previousState = context.flow?.state || "";
   try {
-    const data = await api("api/signin");
+    const data = await api(signInIsNative(context) ? "api/native-signin" : "api/signin");
     if (signInContext !== context) return;
-    if (data?.flow) context.flow = data.flow;
+    const flow = signInIsNative(context) ? nativeFlow(data?.flow) : data?.flow;
+    if (flow) context.flow = flow;
   } catch (error) {
     if (signInContext !== context) return;
     setSignInError(serverErrorText(error));
@@ -3233,9 +3307,12 @@ async function cancelSignIn() {
   context.busy = true;
   renderSignIn();
   try {
-    const data = await api("api/signin/cancel", { method: "POST" });
+    const data = await api(signInIsNative(context) ? "api/native-signin/cancel" : "api/signin/cancel", {
+      method: "POST",
+    });
     if (signInContext !== context) return;
-    context.flow = data?.flow || { ...(context.flow || {}), state: "cancelled" };
+    const flow = signInIsNative(context) ? nativeFlow(data?.flow) : data?.flow;
+    context.flow = flow || { ...(context.flow || {}), state: "cancelled" };
     context.busy = false;
     stopSignInPolling();
     renderSignIn();

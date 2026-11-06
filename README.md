@@ -13,6 +13,7 @@ Every account gets its own browser profile, its own pinned fingerprint and the p
 ## Features
 
 - **Sign in to any provider magpie already knows.** Clean Login reads the provider plugins you have installed and offers an **Add account** entry wherever one exposes a sign-in — an official login page, a form the plugin asks you to fill, or a one-time code it sends for you. No separate provider list to maintain.
+- **Including the ones magpie signs in itself.** A provider that ships with magpie — Antigravity, Codex, Claude — has no plugin to read, so the entry runs magpie's own sign-in instead. With magpie's sign-in pages off, that sign-in prints its link rather than opening it, and Clean Login opens it for you and takes back whatever the page hands out.
 - **Pick the way you sign in.** When a provider offers several routes — a login page per site, a team plan, reusing the desktop app's session, pasting an API key — you choose, and Clean Login tells you which kind each one is before you start.
 - **Fill the form, then the code.** When a provider's sign-in needs a phone number or another value, the dialog asks for it and hands it to the plugin. If the plugin then sends a one-time code, the same dialog asks for the code — no browser window opens when there is nothing to open.
 - **One proxy per account.** Choose the exit in the add-account dialog and the login browser really uses it. The provider's own traffic can use the same exit.
