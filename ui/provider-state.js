@@ -14,16 +14,23 @@ export function localizedText(value, lang = "en") {
 
 // A card offers the add-account entry when the installed plugin scan exposed a
 // signable sign-in method AND the merge carried the installed plugin entry id
-// the service loads the provider by (`signInProvider`). Capability readiness is
+// the service loads the provider by (`signInProvider`), or when magpie itself
+// can sign the provider in (`nativeSignIn`: the provider is in magpie's own
+// list, so `magpie accounts add <agent>` is a door). Capability readiness is
 // deliberately NOT a gate: an unverified flow is exactly the one users should
 // be able to try so they can report what happens. Pure, so the rule is testable
 // without a DOM.
+//
+// The native door matters for the providers magpie ships itself. A built-in
+// has no plugin to scan, so a rule that reads only the plugin layer hides the
+// entry on exactly the providers a user cannot add any other way.
 //
 // "Signable" is broader than "browser": the scan cannot call authorize(), so it
 // cannot tell a browser page from a device code. A method whose kind is only
 // knowable at sign-in time (ZCode's per-site flows) is still offered; the page
 // shown at sign-in is the source of truth.
 export function providerCanSignIn(provider) {
+  if (provider?.nativeSignIn === true) return true;
   // The new flag decides when the card carries it: a method is offered when it
   // is runnable, whatever kind it turns out to be. Older cards only carry the
   // boolean `browser`.
@@ -31,6 +38,16 @@ export function providerCanSignIn(provider) {
     return provider.signableMethod && Boolean(provider?.signInProvider);
   }
   return Boolean(provider?.browserMethod && provider?.signInProvider);
+}
+
+// Which door the add entry opens. A plugin method is tried first because it is
+// the one that can carry a form, a code and this plugin's own isolated browser;
+// the native door is the fallback that keeps a built-in provider reachable.
+export function signInDoor(provider) {
+  if (typeof provider?.signableMethod === "boolean" ? provider.signableMethod && provider?.signInProvider : provider?.browserMethod && provider?.signInProvider) {
+    return "plugin";
+  }
+  return provider?.nativeSignIn === true ? "native" : "none";
 }
 
 // --- the main list and the one collapsed catalog -------------------------
