@@ -128,6 +128,7 @@ test("normalizeScan keeps only public, bounded fields", () => {
   expect(scan.providers).toEqual([
     {
       id: "cursor",
+      name: null,
       package: "@magpie-community/opencode-cursor-auth",
       methods: [
         { type: "oauth", label: "Cursor (browser)", browser: true, category: "browser", prompts: [], runnable: true },
@@ -138,6 +139,27 @@ test("normalizeScan keeps only public, bounded fields", () => {
   ]);
   // No authorize function survives into the serializable projection.
   expect(JSON.stringify(scan)).not.toContain("authorize");
+});
+
+test("normalizeScan keeps the display name each provider declared", () => {
+  // One package can expose several providers, so the name travels per provider
+  // id, never per package. A blank name is no name, and the field is bounded
+  // like every other string in the projection.
+  const scan = normalizeScan({
+    available: true,
+    providers: [
+      { id: "workbuddy", name: "WorkBuddy", methods: [] },
+      { id: "workbuddy-ai", name: "WorkBuddy AI", methods: [] },
+      { id: "zcode", name: "   ", methods: [] },
+      { id: "loomy", name: `  ${"L".repeat(400)}  `, methods: [] },
+    ],
+  });
+  expect(scan.providers.map((provider) => provider.name)).toEqual([
+    "WorkBuddy",
+    "WorkBuddy AI",
+    null,
+    "L".repeat(120),
+  ]);
 });
 
 test("normalizeScan deduplicates provider ids and rejects junk", () => {
@@ -322,7 +344,7 @@ test("scanMagpiePlugins ignores noise and parses the marked JSON line", async ()
   const output = JSON.stringify({ available: true, providers: [{ id: "x", methods: [] }] });
   const exec = fakeExecFile((_f, _a, _o, callback) => callback(null, `warn: something\n${output}\n`));
   const scan = await scanMagpiePlugins({ execFile: exec });
-  expect(scan.providers).toEqual([{ id: "x", package: null, methods: [] }]);
+  expect(scan.providers).toEqual([{ id: "x", name: null, package: null, methods: [] }]);
 });
 
 test("a child error or timeout degrades to unavailable without throwing", async () => {

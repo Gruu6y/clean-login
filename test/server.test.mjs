@@ -164,7 +164,7 @@ test("/api/provider-sources merges magpie's list and reports the source", async 
   expect(res.body).not.toMatch(/client[_-]?secret|access[_-]?token|api[_-]?key|password/i);
 });
 
-test("/api/provider-sources degrades to the local registry without a magpie payload", async () => {
+test("/api/provider-sources keeps installed-plugin cards when magpie's list is missing", async () => {
   for (const body of [undefined, JSON.stringify({}), JSON.stringify({ magpie: null })]) {
     const res = await raw(
       "POST",
@@ -176,7 +176,19 @@ test("/api/provider-sources degrades to the local registry without a magpie payl
     const view = JSON.parse(res.body).providerSources;
     expect(view.source).toBe("local");
     expect(view.magpie.available).toBe(false);
-    for (const provider of view.providers) expect(provider.presence).toBe("local-unknown");
+    const byId = Object.fromEntries(view.providers.map((provider) => [provider.id, provider]));
+    // The three local entries keep the honest "unknown" presence: nobody read
+    // magpie's list, so nothing is claimed about it.
+    for (const id of ["antigravity", "codex", "claude"]) {
+      expect(byId[id].presence).toBe("local-unknown");
+    }
+    // An installed plugin that exposes a provider is evidence on its own, so
+    // its card survives the missing magpie list. This is the bug that used to
+    // delete every plugin card on the launcher path.
+    expect(byId["brand-new"].presence).toBe("plugin-only");
+    // What the card may not do is claim the unread list omits the provider.
+    expect(JSON.stringify(byId["brand-new"].notice)).toContain("was not readable");
+    expect(JSON.stringify(byId["brand-new"].notice)).not.toContain("does not include it");
   }
 });
 
