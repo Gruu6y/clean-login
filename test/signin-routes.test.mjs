@@ -11,6 +11,7 @@ const tmp = mkdtempSync(join(tmpdir(), "clean-login-signin-routes-"));
 let service;
 let token;
 let lastStart = null;
+let lastCode = null;
 
 const flow = {
   flowId: "flow-1",
@@ -44,6 +45,13 @@ const signIn = {
       url: "https://provider/signin",
       instructions: flow.instructions,
     };
+  },
+  // A code plugin (Loomy) hands the callback the one-time code the user typed.
+  async submitCode(code) {
+    const trimmed = typeof code === "string" ? code.trim() : "";
+    if (!trimmed) throw new SignInFlowError("invalid_code", "A verification code is required.", 400);
+    lastCode = trimmed;
+    return { ...flow, state: "finishing", codeRequired: false };
   },
   status: () => flow,
   async cancel() {
@@ -274,11 +282,29 @@ test("POST /api/signin/cancel cancels and returns the new state", async () => {
   expect(await res.json()).toEqual({ cancelled: true, flow });
 });
 
+// The code plugin's own step: the user types the one-time code it sent.
+test("POST /api/signin/code hands the code to the waiting flow", async () => {
+  const res = await api("POST", "/api/signin/code", { code: " 123456 " });
+  expect(res.status).toBe(202);
+  expect(lastCode).toBe("123456");
+  expect((await res.json()).flow.state).toBe("finishing");
+});
+
+test("POST /api/signin/code with an empty code is a clear 400", async () => {
+  const res = await api("POST", "/api/signin/code", { code: "  " });
+  expect(res.status).toBe(400);
+  expect(await res.json()).toEqual({
+    error: "invalid_code",
+    message: "A verification code is required.",
+  });
+});
+
 test("the sign-in routes require the page token", async () => {
   for (const [method, path] of [
     ["GET", "/api/signin"],
     ["POST", "/api/signin"],
     ["POST", "/api/signin/cancel"],
+    ["POST", "/api/signin/code"],
   ]) {
     const res = await api(method, path, method === "POST" ? { provider: "workbuddy" } : undefined, {
       withToken: false,
@@ -291,6 +317,7 @@ test("the sign-in routes reject other methods", async () => {
   for (const [method, path, allow] of [
     ["PUT", "/api/signin", "GET, POST"],
     ["GET", "/api/signin/cancel", "POST"],
+    ["GET", "/api/signin/code", "POST"],
   ]) {
     const res = await api(method, path);
     expect(res.status).toBe(405);
