@@ -490,7 +490,6 @@ test("static files exist and carry no mock data or dead action buttons", () => {
     "signin-cancel",
     "signin-close-footer",
     "signin-start",
-    "identities-retry",
     "accounts-refresh",
     "account-filter-all",
     "account-filter-signed-in",

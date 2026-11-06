@@ -129,19 +129,10 @@ const messages = {
     signInDone: "Signed in. The credential was written to magpie.",
     signInCancelled: "The sign-in was cancelled.",
     signInBusy: "A sign-in is already in progress.",
-    identitiesTitle: "Account identities",
-    identitiesCopy: "Each account keeps its own browser fingerprint. A signed-out identity is kept, so signing in again reuses the same fingerprint instead of drawing a new one.",
-    identitiesEmpty: "No signed-out identities yet.",
     identitiesLastSignedIn: "Last signed in {time}",
-    identitiesClear: "Clear identity",
-    identitiesClearing: "Clearing…",
-    identitiesCleared: "The identity was cleared.",
     identitiesClearTitle: "Clear this identity?",
     identitiesClearCopy: "The kept browser fingerprint and profile of “{name}” are deleted. The next sign-in for that account draws a new fingerprint.",
     identitiesClearConfirm: "Clear identity",
-    identitiesError: "The identities could not be loaded.",
-    identitiesLoading: "Reading the kept identities…",
-    identitiesRetry: "Retry",
     environmentTitle: "Login browser setup",
     environmentCopy: "Clean Login needs a one-time isolated browser so sign-in pages never open in your everyday browser. Nothing is downloaded until you choose Prepare.",
     environmentSizeLabel: "Download",
@@ -290,6 +281,7 @@ const messages = {
     accountsRefresh: "Refresh",
     accountsRefreshing: "Refreshing…",
     accountsRefreshed: "Read {count} accounts.",
+    accountsCleared: "The identity was cleared.",
     accountSearchLabel: "Search accounts",
     accountSearchPlaceholder: "Search accounts",
     accountSortLabel: "Sort",
@@ -485,19 +477,10 @@ const messages = {
     signInDone: "登录完成，凭据已写入 magpie。",
     signInCancelled: "登录已取消。",
     signInBusy: "已有登录正在进行。",
-    identitiesTitle: "账号身份",
-    identitiesCopy: "每个账号都有自己的浏览器指纹。已登出的身份会被保留，因此再次登录时会重用同一个指纹，而不是重新生成。",
-    identitiesEmpty: "目前没有已登出的身份。",
     identitiesLastSignedIn: "上次登录于 {time}",
-    identitiesClear: "清除身份",
-    identitiesClearing: "清除中…",
-    identitiesCleared: "身份已清除。",
     identitiesClearTitle: "清除这个身份？",
     identitiesClearCopy: "“{name}”保留的浏览器指纹与配置目录会被删除。该账号下次登录时会生成新的指纹。",
     identitiesClearConfirm: "清除身份",
-    identitiesError: "无法加载身份列表。",
-    identitiesLoading: "正在读取保留的身份…",
-    identitiesRetry: "重试",
     environmentTitle: "登录浏览器设置",
     environmentCopy: "干净登录需要一次性准备一个隔离浏览器，登录页面不会出现在日常浏览器中。只有点击“准备”后才会开始下载。",
     environmentSizeLabel: "下载大小",
@@ -646,6 +629,7 @@ const messages = {
     accountsRefresh: "刷新",
     accountsRefreshing: "刷新中…",
     accountsRefreshed: "已读取 {count} 个账号。",
+    accountsCleared: "身份已清除。",
     accountSearchLabel: "搜索账号",
     accountSearchPlaceholder: "搜索账号",
     accountSortLabel: "排序",
@@ -841,19 +825,10 @@ const messages = {
     signInDone: "登入完成，憑證已寫入 magpie。",
     signInCancelled: "登入已取消。",
     signInBusy: "已有登入正在進行。",
-    identitiesTitle: "帳號身分",
-    identitiesCopy: "每個帳號都有自己的瀏覽器指紋。已登出的身分會被保留，因此再次登入時會重用同一個指紋，而不是重新產生。",
-    identitiesEmpty: "目前沒有已登出的身分。",
     identitiesLastSignedIn: "上次登入於 {time}",
-    identitiesClear: "清除身分",
-    identitiesClearing: "清除中…",
-    identitiesCleared: "身分已清除。",
     identitiesClearTitle: "清除這個身分？",
     identitiesClearCopy: "「{name}」保留的瀏覽器指紋與設定檔會被刪除。該帳號下次登入時會產生新的指紋。",
     identitiesClearConfirm: "清除身分",
-    identitiesError: "無法載入身分列表。",
-    identitiesLoading: "正在讀取保留的身分…",
-    identitiesRetry: "重試",
     environmentTitle: "登入瀏覽器設定",
     environmentCopy: "乾淨登入需要一次性準備一個隔離瀏覽器，登入頁面不會出現在日常瀏覽器中。只有點擊「準備」後才會開始下載。",
     environmentSizeLabel: "下載大小",
@@ -1002,6 +977,7 @@ const messages = {
     accountsRefresh: "重新整理",
     accountsRefreshing: "重新整理中…",
     accountsRefreshed: "已讀取 {count} 個帳號。",
+    accountsCleared: "身分已清除。",
     accountSearchLabel: "搜尋帳號",
     accountSearchPlaceholder: "搜尋帳號",
     accountSortLabel: "排序",
@@ -1197,19 +1173,10 @@ const messages = {
     signInDone: "ログインが完了し、認証情報を magpie に書き込みました。",
     signInCancelled: "ログインをキャンセルしました。",
     signInBusy: "すでにログインが進行中です。",
-    identitiesTitle: "アカウントID",
-    identitiesCopy: "各アカウントは独自のブラウザ指紋を持ちます。ログアウトしたIDは保持されるため、次にログインしても同じ指紋が使われ、新しい指紋が生成されることはありません。",
-    identitiesEmpty: "ログアウトしたIDはまだありません。",
     identitiesLastSignedIn: "最終ログイン {time}",
-    identitiesClear: "IDを消去",
-    identitiesClearing: "消去中…",
-    identitiesCleared: "IDを消去しました。",
     identitiesClearTitle: "このIDを消去しますか？",
     identitiesClearCopy: "「{name}」の保持されているブラウザ指紋とプロファイルを削除します。次回のログインでは新しい指紋が生成されます。",
     identitiesClearConfirm: "IDを消去",
-    identitiesError: "ID一覧を読み込めませんでした。",
-    identitiesLoading: "保持されているIDを読み込み中…",
-    identitiesRetry: "再試行",
     environmentTitle: "ログイン用ブラウザーの準備",
     environmentCopy: "クリーンログインは、ログインページが普段のブラウザーに残らないよう、一度だけ隔離されたブラウザーを準備します。「準備」を選ぶまでダウンロードは始まりません。",
     environmentSizeLabel: "ダウンロード",
@@ -1358,6 +1325,7 @@ const messages = {
     accountsRefresh: "再読み込み",
     accountsRefreshing: "再読み込み中…",
     accountsRefreshed: "{count} 件のアカウントを読み込みました。",
+    accountsCleared: "IDを消去しました。",
     accountSearchLabel: "アカウントを検索",
     accountSearchPlaceholder: "アカウントを検索",
     accountSortLabel: "並び替え",
@@ -1538,12 +1506,10 @@ let environmentTimer = null;
 // never carries a path or a credential.
 let accountIdentities = [];
 let accountIdentitiesError = "";
-let accountIdentitiesNotice = "";
-let accountIdentitiesLoading = false;
-let clearingIdentityKey = "";
-// The accounts table is the same unified GET /api/accounts list as the
-// identities card; it is never seeded with local rows. Its view state lives
-// only in this document, like the proxy filters.
+let clearingAccount = false;
+// The accounts table is the unified GET /api/accounts list; it is never
+// seeded with local rows. Its view state lives only in this document, like
+// the proxy filters.
 let providerCatalog = [];
 let accountQuery = "";
 let accountFilter = "all";
@@ -1740,9 +1706,6 @@ function applyText() {
   byId("report-close").setAttribute("aria-label", text.close);
   byId("signin-account-label").textContent = text.signInAccountLabel;
   byId("signin-account-hint").textContent = text.signInAccountHint;
-  byId("identities-title").textContent = text.identitiesTitle;
-  byId("identities-copy").textContent = text.identitiesCopy;
-  byId("identities-retry").textContent = text.identitiesRetry;
   // --- accounts tab / panel ---
   byId("tab-accounts-label").textContent = text.accounts;
   byId("accounts-title").textContent = text.accountsTitle;
@@ -2589,91 +2552,13 @@ async function openReportOnGitHub() {
   }
 }
 
-// --- account identities ----------------------------------------------------
+// --- keeping a signed-out identity ------------------------------------------
 //
 // A signed-out account keeps its directory, its profile and its pinned
 // fingerprint, so the next sign-in for that credential presents the same
 // machine. GET /api/accounts lists those identities (never a path, never a
-// credential); DELETE /api/accounts/<provider>/<key> clears one that is not
-// signed in. Every control here has a real request behind it and a visible
-// outcome: loading, failure and success all say so.
-
-function setIdentitiesError(message) {
-  const node = byId("identities-error");
-  node.textContent = message || "";
-  node.hidden = !message;
-}
-
-function renderIdentities() {
-  const card = byId("account-identities");
-  const list = byId("account-identities-list");
-  const retired = accountIdentities.filter((account) => account?.signedIn !== true);
-  card.hidden = false;
-  byId("identities-badge").textContent = String(retired.length);
-  setIdentitiesError(accountIdentitiesError);
-  const notice = byId("identities-notice");
-  notice.textContent = accountIdentitiesNotice || "";
-  notice.hidden = !accountIdentitiesNotice;
-  const retry = byId("identities-retry");
-  retry.hidden = !accountIdentitiesError && !accountIdentitiesLoading;
-  retry.disabled = accountIdentitiesLoading;
-
-  list.textContent = "";
-  if (accountIdentitiesLoading && !retired.length) {
-    const loading = document.createElement("p");
-    loading.className = "identity-empty";
-    loading.textContent = text.identitiesLoading;
-    list.append(loading);
-    return;
-  }
-  if (!retired.length) {
-    const empty = document.createElement("p");
-    empty.className = "identity-empty";
-    empty.textContent = accountIdentitiesError ? text.identitiesError : text.identitiesEmpty;
-    list.append(empty);
-    return;
-  }
-  for (const account of retired) list.append(identityRow(account));
-}
-
-// One kept identity: the account's own name, its uid, when it was last signed
-// in, and the entry that clears it.
-function identityRow(account) {
-  const view = accountIdentityView(account);
-  const row = document.createElement("div");
-  row.className = "identity-row";
-  row.dataset.accountKey = account.key;
-
-  const name = document.createElement("p");
-  name.className = "identity-name";
-  name.textContent = view.label;
-  row.append(name);
-
-  const meta = document.createElement("span");
-  meta.className = "identity-meta";
-  const parts = [];
-  if (view.uid && view.uid !== view.label) parts.push(view.uid);
-  if (view.retiredAt) {
-    parts.push(
-      text.identitiesLastSignedIn.replace("{time}", formatTime(view.retiredAt)),
-    );
-  }
-  meta.textContent = parts.join(" · ");
-  row.append(meta);
-
-  const actions = document.createElement("div");
-  actions.className = "identity-actions";
-  const clearing = clearingIdentityKey === account.key;
-  const clear = miniButton(
-    clearing ? text.identitiesClearing : text.identitiesClear,
-    () => askClearIdentity(account),
-    true,
-  );
-  clear.disabled = clearing || Boolean(clearingIdentityKey);
-  actions.append(clear);
-  row.append(actions);
-  return row;
-}
+// credential); the accounts page renders them, and DELETE
+// /api/accounts/<provider>/<key> clears one that is not signed in.
 
 // The second confirmation: the confirm dialog asks, and only its action
 // button deletes. The pending target is remembered by the confirm controller,
@@ -2695,32 +2580,29 @@ function askClearIdentity(account) {
   dialog.showModal();
 }
 
-// Deletes the identity and refreshes the list. A failure keeps the identity
-// and says why.
+// Deletes the identity and refreshes the accounts table. A failure keeps the
+// identity and says why; both outcomes are reported on the accounts page.
 async function clearIdentity(account) {
-  if (clearingIdentityKey) return;
-  clearingIdentityKey = account.key;
+  if (clearingAccount) return;
+  clearingAccount = true;
   accountIdentitiesError = "";
-  accountIdentitiesNotice = "";
-  renderIdentities();
+  accountsNotice = "";
+  renderAccounts();
   try {
     await api(accountIdentityPath(account.provider, account.key), { method: "DELETE" });
-    clearingIdentityKey = "";
-    accountIdentitiesNotice = text.identitiesCleared;
+    accountsNotice = text.accountsCleared;
     await loadAccountIdentities();
   } catch (error) {
-    clearingIdentityKey = "";
     accountIdentitiesError = accountErrorText(error);
-    renderIdentities();
+  } finally {
+    clearingAccount = false;
+    renderAccounts();
   }
 }
 
-// Reads the identities. A failed read is reported in the card and the list
-// keeps whatever it had; it never blocks the rest of the page.
+// Reads the accounts. A failed read is reported on the accounts page and the
+// table keeps whatever it had; it never blocks the rest of the page.
 async function loadAccountIdentities() {
-  accountIdentitiesLoading = true;
-  accountIdentitiesError = "";
-  renderIdentities();
   try {
     const data = await api("api/accounts");
     accountIdentities = Array.isArray(data?.accounts) ? data.accounts : [];
@@ -2728,8 +2610,6 @@ async function loadAccountIdentities() {
   } catch (error) {
     accountIdentitiesError = serverErrorText(error);
   } finally {
-    accountIdentitiesLoading = false;
-    renderIdentities();
     renderAccounts();
     // The counts order the main list, so the cards are laid out again once the
     // identities arrive. The split does not depend on them: no card moves
@@ -4078,7 +3958,9 @@ function accountRow(account) {
   actions.append(checkButton);
   actions.append(miniButton(text.accountDetail, () => openAccountDetail(account)));
   if (!view.signedIn) {
-    actions.append(miniButton(text.accountClear, () => askClearIdentity(account), true));
+    const clear = miniButton(text.accountClear, () => askClearIdentity(account), true);
+    clear.disabled = clearingAccount;
+    actions.append(clear);
   }
 
   row.append(name, fingerprint, lastLogin, checkCell, statusCell, actions);
@@ -4702,7 +4584,6 @@ byId("environment-cancel").addEventListener("click", cancelEnvironment);
 byId("environment-retry").addEventListener("click", prepareEnvironment);
 byId("signin-start").addEventListener("click", startSignIn);
 byId("signin-cancel").addEventListener("click", cancelSignIn);
-byId("identities-retry").addEventListener("click", loadAccountIdentities);
 byId("signin-close").addEventListener("click", closeSignInDialog);
 byId("signin-close-footer").addEventListener("click", closeSignInDialog);
 byId("report-close").addEventListener("click", closeReportDialog);

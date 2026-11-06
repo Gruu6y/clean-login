@@ -127,33 +127,28 @@ test("the sign-in dialog offers the identity picker and posts the chosen key", (
   expect(app).toContain("selectedSignInAccount()");
 });
 
-test("the identity card lists each identity and wires its clear entry", () => {
-  expect(html).toContain('id="account-identities"');
-  expect(html).toContain('id="account-identities-list"');
-  expect(html).toContain('id="identities-retry"');
-  expect(app).toContain("function renderIdentities()");
-  expect(app).toContain("function identityRow(account)");
+test("kept identities are managed on the accounts page, not a providers card", () => {
+  // The old identities card sat on the Providers tab and duplicated the
+  // accounts table; it is gone, and the clear entry now lives in the table.
+  expect(html).not.toContain('id="account-identities"');
+  expect(html).not.toContain('id="account-identities-list"');
+  expect(html).not.toContain('id="identities-retry"');
+  expect(app).not.toContain("function renderIdentities()");
+  expect(app).not.toContain("function identityRow(account)");
+  // Clearing an identity is still a real two-step action that reloads the list.
   expect(app).toContain("function askClearIdentity(account)");
   expect(app).toContain('api("api/accounts")');
   expect(app).toContain("accountIdentityPath(account.provider, account.key)");
   expect(app).toContain('method: "DELETE"');
-  // The clear button is a real two-step action and then the list reloads.
   expect(app).toContain("loadAccountIdentities()");
-  expect(app).toContain("clear.disabled = clearing || Boolean(clearingIdentityKey)");
+  expect(app).toContain("clear.disabled = clearingAccount");
   // Every new string exists in all four language tables.
   for (const key of [
-    "identitiesTitle",
-    "identitiesCopy",
-    "identitiesEmpty",
-    "identitiesLoading",
-    "identitiesError",
-    "identitiesRetry",
-    "identitiesClear",
-    "identitiesClearing",
-    "identitiesCleared",
+    "identitiesLastSignedIn",
     "identitiesClearTitle",
     "identitiesClearCopy",
     "identitiesClearConfirm",
+    "accountsCleared",
     "signInAccountLabel",
     "signInAccountHint",
     "signInAccountNew",
