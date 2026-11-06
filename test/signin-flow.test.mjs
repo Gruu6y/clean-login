@@ -14,6 +14,7 @@ import {
   writeAccountMeta,
 } from "../lib/account-identity.mjs";
 import { SignInBrowserError } from "../lib/browser-launcher.mjs";
+import { currentSignInEgress } from "../lib/signin-egress.mjs";
 import {
   SIGNIN_STATES,
   SignInFlowError,
@@ -713,4 +714,58 @@ test("the state list covers the whole lifecycle", () => {
     "error",
     "cancelled",
   ]);
+});
+
+// A sign-in has two legs, and both must leave through the exit the dialog
+// picked. The browser leg is covered by browser-launcher; this covers the other
+// one: the plugin mints the link and exchanges the code inside magpie's plugin
+// host, which would otherwise send them through magpie's own proxy.
+test("the plugin's own requests leave through the picked proxy", async () => {
+  const seen = [];
+  const proxy = { id: "p-01", type: "http", host: "10.1.2.3", port: 18118, username: "" };
+  const methods = [
+    {
+      type: "oauth",
+      label: "Provider account (browser)",
+      authorize: async () => {
+        seen.push(["authorize", currentSignInEgress()]);
+        return {
+          url: "https://provider/signin",
+          instructions: "go",
+          method: "auto",
+          callback: async () => {
+            seen.push(["callback", currentSignInEgress()]);
+            return success();
+          },
+        };
+      },
+    },
+  ];
+  const { controller } = await harness({ methods });
+  await controller.startSignIn({ provider: "workbuddy", proxy });
+  await controller.whenSettled();
+  expect(seen).toEqual([
+    ["authorize", "http://10.1.2.3:18118"],
+    ["callback", "http://10.1.2.3:18118"],
+  ]);
+  expect(controller.status().state).toBe("done");
+});
+
+test("a sign-in with no proxy chosen does not inherit magpie's silently", async () => {
+  const seen = [];
+  const methods = [
+    {
+      type: "oauth",
+      label: "Provider account (browser)",
+      authorize: async () => {
+        seen.push(currentSignInEgress());
+        return { url: "https://provider/signin", instructions: "go", method: "auto", callback: async () => success() };
+      },
+    },
+  ];
+  const { controller } = await harness({ methods });
+  await controller.startSignIn({ provider: "workbuddy" });
+  await controller.whenSettled();
+  // "" is the direct option: no proxy at all, not "whatever magpie would use".
+  expect(seen).toEqual([""]);
 });

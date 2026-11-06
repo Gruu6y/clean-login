@@ -16,7 +16,7 @@ Every account gets its own browser profile, its own pinned fingerprint and the p
 - **Including the ones magpie signs in itself.** A provider that ships with magpie — Antigravity, Codex, Claude — has no plugin to read, so the entry runs magpie's own sign-in instead. With magpie's sign-in pages off, that sign-in prints its link rather than opening it, and Clean Login opens it for you and takes back whatever the page hands out.
 - **Pick the way you sign in.** When a provider offers several routes — a login page per site, a team plan, reusing the desktop app's session, pasting an API key — you choose, and Clean Login tells you which kind each one is before you start.
 - **Fill the form, then the code.** When a provider's sign-in needs a phone number or another value, the dialog asks for it and hands it to the plugin. If the plugin then sends a one-time code, the same dialog asks for the code — no browser window opens when there is nothing to open.
-- **One proxy per account.** Choose the exit in the add-account dialog and the login browser really uses it. The provider's own traffic can use the same exit.
+- **One proxy per account.** Choose the exit in the add-account dialog and the whole sign-in uses it — the login browser, and the plugin's own requests too, the link it mints and the code it exchanges. The provider's own traffic can use the same exit.
 - **Test an exit before you trust it.** A real connection through the proxy reports the exit IP, its region, and the latency. No direct-connection fallback: if it fails, you see why.
 - **Trust score per exit.** For each proxy you can read the Claude IP trust score that page publishes, opened through that very proxy, and keep the number next to the row.
 - **Find the exit you need.** Filter your list by region and by a latency range without leaving the page.
@@ -49,6 +49,7 @@ The first time you sign in, Clean Login downloads its own browser runtime — ab
 - **Each account is its own browser.** Profiles, fingerprints and cookies belong to one account and are never shared, so signing in twice never merges two identities.
 - **A provider needs a sign-in magpie can drive.** A plugin that only accepts a pasted token or a key is listed with that reason instead of an Add account button. A plugin whose sign-in needs a value from you, or sends you a code, works through the dialog.
 - **The plugin follows magpie.** It uses the provider plugins you already installed, so a provider you add to magpie shows up here too.
+- **The sign-in leaves through the exit you picked.** Both halves of it: the browser window, and the requests the plugin makes to mint the link and exchange the code. Those would otherwise go out through magpie's own proxy, which is not the one on the card. A SOCKS exit carries the browser window but not the plugin's own requests — the runtime's proxy support speaks HTTP only — so those still go out through magpie's exit.
 - **Nothing is shared with anyone.** There is no telemetry and no account: the only network calls are the ones you start — the proxy test, the trust score page, and the provider's own sign-in page.
 
 ## Something wrong?
