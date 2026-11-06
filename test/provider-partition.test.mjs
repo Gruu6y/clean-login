@@ -104,6 +104,24 @@ test("an unreadable magpie list never hides every card behind the fold", () => {
   expect(other).toEqual([]);
 });
 
+test("a catalogue offer waits in the fold even when the magpie list is unreadable", () => {
+  const items = [
+    card({ id: "antigravity", name: "Antigravity", presence: "local-unknown", signableMethod: false, browserMethod: false, signInProvider: null }),
+    card({ id: "workbuddy", name: "WorkBuddy", presence: "plugin-only" }),
+    card({ id: "kimi-work", name: "Kimi Work", presence: "catalog", signableMethod: false, browserMethod: false, signInProvider: null }),
+    card({ id: "zed", name: "Zed", presence: "catalog", signableMethod: false, browserMethod: false, signInProvider: null }),
+  ];
+  // The degraded split promotes what it cannot judge, but an offer with no add
+  // entry is not part of "what I can use now".
+  const degraded = partitionProviders(items);
+  expect(degraded.primary.map((item) => item.id)).toEqual(["antigravity", "workbuddy"]);
+  expect(degraded.other.map((item) => item.id)).toEqual(["kimi-work", "zed"]);
+  // Once magpie's list is readable the same cards stay in the fold.
+  const known = partitionProviders([...items, card({ id: "codex", name: "Codex", presence: "both" })]);
+  expect(known.primary.map((item) => item.id)).toEqual(["codex"]);
+  expect(known.other.map((item) => item.id)).toEqual(["antigravity", "workbuddy", "kimi-work", "zed"]);
+});
+
 test("the split tolerates junk input", () => {
   expect(partitionProviders()).toEqual({ primary: [], other: [] });
   expect(partitionProviders(null)).toEqual({ primary: [], other: [] });
