@@ -12,17 +12,6 @@ export function localizedText(value, lang = "en") {
   return "";
 }
 
-export function providerStatusView(provider = {}, labels = {}) {
-  const state = provider?.capability?.state;
-  if (state === "ready") {
-    return { state: "ready", label: labels.providerReady || "Ready" };
-  }
-  if (state === "blocked") {
-    return { state: "blocked", label: labels.providerBlocked || "Blocked" };
-  }
-  return { state: "pending", label: labels.providerPending || "Pending verification" };
-}
-
 // A card offers the add-account entry when the installed plugin scan exposed a
 // signable sign-in method AND the merge carried the installed plugin entry id
 // the service loads the provider by (`signInProvider`). Capability readiness is

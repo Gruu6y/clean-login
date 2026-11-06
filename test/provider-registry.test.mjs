@@ -55,20 +55,25 @@ test("the registry has fixed, uniquely identified providers with every public fi
     }
     for (const lang of LANGS) {
       expect(provider.description[lang]).toBeTruthy();
-      expect(provider.notice[lang]).toBeTruthy();
-      expect(provider.capability.reason[lang]).toBeTruthy();
     }
+    // `notice` is optional now: a card only carries one when it has something
+    // to say that the description does not already say.
+    for (const value of Object.values(provider.notice)) {
+      expect(typeof value).toBe("string");
+    }
+    // No verification reason is written any more. A state that can never change
+    // does not deserve a sentence on every card.
+    expect(Object.keys(provider.capability.reason)).toEqual([]);
     expect(PROVIDER_CAPABILITY_STATES).toContain(provider.capability.state);
   }
 });
 
-test("no provider claims to be ready before its sign-in flow is verified", () => {
+test("the registry writes no verification reason and no card claims readiness", () => {
   for (const provider of PROVIDERS) {
     expect(provider.capability.state).not.toBe("ready");
     expect(["pending", "blocked"]).toContain(provider.capability.state);
-    expect(provider.capability.reason.en.toLowerCase()).toMatch(
-      /not been verified|not verified|not implemented|pending|blocked|unavailable/,
-    );
+    expect(Object.keys(provider.capability.reason)).toEqual([]);
+    expect(JSON.stringify(provider.notice)).not.toMatch(/not verified|not been verified|unverified/i);
   }
 });
 

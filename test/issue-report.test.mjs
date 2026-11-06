@@ -18,8 +18,6 @@ import {
 const provider = {
   id: "antigravity",
   name: { en: "Google Antigravity", "zh-Hans": "Google Antigravity" },
-  capabilityState: "pending",
-  capabilityReason: { "zh-Hans": "本插件尚未验证 Antigravity 的登录流程。" },
   description: { "zh-Hans": "尚未实现登录。认证主机与回调端口是假定且未验证的。" },
   notice: { "zh-Hans": "" },
   authMethods: [{ type: "browser-oauth", label: "浏览器登录" }],
@@ -50,14 +48,15 @@ test("the body never carries a single credential-shaped field", () => {
   }
 });
 
-test("the body names the card, the state and the environment", () => {
+test("the body names the card and the environment, and no longer a verification state", () => {
   const report = buildIssueReport(base);
   expect(report.body).toContain("antigravity");
-  expect(report.body).toContain("等待验证 (pending)");
-  expect(report.body).toContain("本插件尚未验证 Antigravity 的登录流程。");
   expect(report.body).toContain("浏览器登录");
   expect(report.body).toContain("win32 x64");
   expect(report.body).toContain("0.1.14");
+  // The card shows no verification state, so the report has no row for one.
+  expect(report.body).not.toContain("等待验证");
+  expect(report.body).not.toContain("状态说明");
   expect(report.body).toContain("2026-11-06T05:40:00.000Z");
   expect(report.body).toContain("不含账号、cookie、令牌或代理凭据");
 });

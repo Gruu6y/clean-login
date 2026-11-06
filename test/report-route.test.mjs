@@ -53,23 +53,30 @@ test("the report routes are token-gated, allowlisted and credential-free", async
     expect(denied.status).toBe(403);
     expect((await denied.json()).error).toBe("unauthorized");
 
+    // The page sends an id only. Every card field in the body is resolved by the
+    // service from that id, so anything else the page puts in the request is
+    // ignored — a report cannot be made to say something the card does not say.
     const built = await (
       await post("/api/report", {
-        provider: {
-          id: "antigravity",
-          name: "Google Antigravity",
-          capabilityState: "pending",
-          // Not part of the allowlist: must never reach the body.
-          cookie: "SESSION=should-not-appear",
-          token: "ghp_should_not_appear",
-        },
+        provider: "antigravity",
+        name: "Ignored name",
+        capabilityState: "pending",
+        // Not part of the allowlist: must never reach the body.
+        cookie: "session=should-not-appear",
+        token: "ghp_should_not_appear",
         note: "点添加账号之后没有反应",
         language: "zh-Hans",
       })
     ).json();
 
     expect(built.report.body).toContain("antigravity");
+    // The real name comes from the registry, not from the request body.
+    expect(built.report.body).toContain("Google Antigravity");
+    expect(built.report.body).not.toContain("Ignored name");
     expect(built.report.body).toContain("点添加账号之后没有反应");
+    // No verification state row any more.
+    expect(built.report.body).not.toContain("等待验证");
+    expect(built.report.body).not.toContain("状态说明");
     expect(built.report.body).not.toContain("should-not-appear");
     expect(built.report.body).not.toContain("ghp_should_not_appear");
     expect(built.report.url.startsWith("https://github.com/Gruu6y/clean-login/issues/new?")).toBe(true);

@@ -121,7 +121,9 @@ test("bootstrap returns the Host-driven shape with the public provider registry"
   ]);
   for (const provider of body.providers) {
     expect(provider.capability.state).not.toBe("ready");
-    expect(provider.capability.reason.en).toBeTruthy();
+    // No verification reason is published any more: a card carries no state a
+    // user could ever clear, so there is nothing to explain away.
+    expect(provider.capability.reason).toEqual({});
     expect(provider.clientSecret).toBeUndefined();
     expect(provider.clientId).toBeUndefined();
     expect(provider.token).toBeUndefined();

@@ -20,7 +20,6 @@ import {
   methodCategoryText,
   partitionProviders,
   providerCanSignIn,
-  providerStatusView,
   shouldPollPluginScan,
 } from "./provider-state.js";
 import { signInActive, signInPayload } from "./signin-state.js";
@@ -65,9 +64,6 @@ const messages = {
     providersEmptyCopy: "Supported providers appear here when the local service is ready.",
     providersMoreTitle: "Other subscription providers",
     providersMoreHint: "Every other subscription service the local data knows about: magpie's own providers, and the plugins written for magpie and checked against its built-in sign-in.",
-    providerPending: "Pending verification",
-    providerReady: "Ready",
-    providerBlocked: "Blocked",
     providersSourceMagpie: "List derived from magpie",
     providersSourceLocal: "magpie list unavailable · using the local list",
     providersDiff: "{both} in both · {localOnly} only local · {magpieOnly} only in magpie",
@@ -110,7 +106,6 @@ const messages = {
     reportBuildFailed: "The report could not be prepared.",
     signInTitle: "Add account",
     signInCopy: "This opens an isolated browser window. Complete the sign-in there; Clean Login writes the resulting credential into magpie.",
-    signInUnverified: "This flow has not been verified in Clean Login yet. You can try it directly; failures are reported honestly and feedback is welcome.",
     signInProxyLabel: "Proxy IP",
     signInProxyDirect: "No proxy (direct)",
     signInMethodLabel: "Sign-in method",
@@ -316,8 +311,6 @@ const messages = {
     accountColCheck: "Identity check",
     accountColStatus: "Status",
     accountColActions: "Actions",
-    accountUnverified: "Unverified flow",
-    accountUnverifiedTitle: "This account came from a sign-in flow that has not been verified in Clean Login yet.",
     accountSignedIn: "Signed in",
     accountSignedOut: "Signed out · identity kept",
     accountCheckNone: "Not checked",
@@ -427,9 +420,6 @@ const messages = {
     providersEmptyCopy: "本地服务就绪后，支持的供应商会显示在这里。",
     providersMoreTitle: "其他订阅类供应商",
     providersMoreHint: "其余订阅类供应商都在这里：magpie 自带的，以及为 magpie 编写、对照过内置登录的插件。",
-    providerPending: "等待验证",
-    providerReady: "就绪",
-    providerBlocked: "已阻止",
     providersSourceMagpie: "名单来自 magpie",
     providersSourceLocal: "未取得 magpie 名单 · 使用本地名单",
     providersDiff: "两边都有 {both} · 仅本地 {localOnly} · 仅 magpie {magpieOnly}",
@@ -472,7 +462,6 @@ const messages = {
     reportBuildFailed: "没能生成报告正文。",
     signInTitle: "添加账号",
     signInCopy: "这会打开一个隔离浏览器窗口。请在窗口里完成登录，干净登录会把生成的凭据写入 magpie。",
-    signInUnverified: "该流程还没有在干净登录中验证过。你可以直接尝试，失败会如实报错，也欢迎反馈问题。",
     signInProxyLabel: "代理 IP",
     signInProxyDirect: "不使用代理（直连）",
     signInMethodLabel: "登录方式",
@@ -678,8 +667,6 @@ const messages = {
     accountColCheck: "身份检测",
     accountColStatus: "状态",
     accountColActions: "操作",
-    accountUnverified: "未验证流程",
-    accountUnverifiedTitle: "这个账号来自一条还没有在干净登录中验证过的登录流程。",
     accountSignedIn: "已登录",
     accountSignedOut: "已登出 · 保留身份",
     accountCheckNone: "未检测",
@@ -789,9 +776,6 @@ const messages = {
     providersEmptyCopy: "本機服務就緒後，支援的供應商會顯示在這裡。",
     providersMoreTitle: "其他訂閱類供應商",
     providersMoreHint: "其餘訂閱類供應商都在這裡：magpie 內建的，以及為 magpie 撰寫、對照過內建登入的外掛。",
-    providerPending: "等待驗證",
-    providerReady: "就緒",
-    providerBlocked: "已封鎖",
     providersSourceMagpie: "名單來自 magpie",
     providersSourceLocal: "未取得 magpie 名單 · 使用本機名單",
     providersDiff: "兩邊都有 {both} · 僅本機 {localOnly} · 僅 magpie {magpieOnly}",
@@ -834,7 +818,6 @@ const messages = {
     reportBuildFailed: "沒能產生回報正文。",
     signInTitle: "新增帳號",
     signInCopy: "這會開啟一個隔離瀏覽器視窗。請在視窗裡完成登入，乾淨登入會把產生的憑證寫入 magpie。",
-    signInUnverified: "此流程尚未在乾淨登入中驗證過。你可以直接嘗試，失敗會如實回報，也歡迎回報問題。",
     signInProxyLabel: "代理 IP",
     signInProxyDirect: "不使用代理（直連）",
     signInMethodLabel: "登入方式",
@@ -1040,8 +1023,6 @@ const messages = {
     accountColCheck: "身分檢測",
     accountColStatus: "狀態",
     accountColActions: "操作",
-    accountUnverified: "未驗證流程",
-    accountUnverifiedTitle: "這個帳號來自一條還沒有在乾淨登入中驗證過的登入流程。",
     accountSignedIn: "已登入",
     accountSignedOut: "已登出 · 保留身分",
     accountCheckNone: "未檢測",
@@ -1151,9 +1132,6 @@ const messages = {
     providersEmptyCopy: "ローカルサービスが準備できると、対応プロバイダーがここに表示されます。",
     providersMoreTitle: "その他のサブスクリプション",
     providersMoreHint: "残りのサブスクリプション提供元はここにすべて入ります。magpie 内蔵のものと、magpie 向けに作られ内蔵サインインと突き合わせ済みのプラグインです。",
-    providerPending: "検証待ち",
-    providerReady: "準備完了",
-    providerBlocked: "ブロック中",
     providersSourceMagpie: "magpie から取得した一覧",
     providersSourceLocal: "magpie の一覧を取得できず · ローカル一覧を使用",
     providersDiff: "両方 {both} · ローカルのみ {localOnly} · magpie のみ {magpieOnly}",
@@ -1196,7 +1174,6 @@ const messages = {
     reportBuildFailed: "報告本文を作成できませんでした。",
     signInTitle: "アカウントを追加",
     signInCopy: "隔離されたブラウザーウィンドウを開きます。そこでログインすると、クリーンログインが得られた認証情報を magpie に書き込みます。",
-    signInUnverified: "このフローはクリーンログインではまだ検証されていません。そのまま試せます。失敗はそのまま表示され、問題の報告も歓迎します。",
     signInProxyLabel: "プロキシ IP",
     signInProxyDirect: "プロキシを使用しない（直接接続）",
     signInMethodLabel: "ログイン方法",
@@ -1402,8 +1379,6 @@ const messages = {
     accountColCheck: "身元判定",
     accountColStatus: "状態",
     accountColActions: "操作",
-    accountUnverified: "未検証のフロー",
-    accountUnverifiedTitle: "このアカウントはクリーンログインで未検証のログインフローから作成されました。",
     accountSignedIn: "ログイン中",
     accountSignedOut: "ログアウト済み · 身分を保持",
     accountCheckNone: "未判定",
@@ -1747,7 +1722,6 @@ function applyText() {
   byId("confirm-close").setAttribute("aria-label", text.close);
   byId("signin-title").textContent = text.signInTitle;
   byId("signin-copy").textContent = text.signInCopy;
-  byId("signin-unverified").textContent = text.signInUnverified;
   byId("signin-proxy-label").textContent = text.signInProxyLabel;
   byId("signin-method-label").textContent = text.signInMethodLabel;
   byId("signin-start").textContent = text.signInStart;
@@ -2381,12 +2355,7 @@ function providerCard(provider) {
   name.className = "provider-name";
   name.textContent = provider.name || provider.id;
 
-  const status = providerStatusView(provider, text);
-  const statusNode = document.createElement("span");
-  statusNode.className = `provider-status ${status.state}`;
-  statusNode.textContent = status.label;
-
-  head.append(mark, name, statusNode);
+  head.append(mark, name);
 
   const description = document.createElement("p");
   description.className = "provider-description";
@@ -2400,7 +2369,8 @@ function providerCard(provider) {
   notice.className = "provider-notice";
   notice.textContent = localizedText(provider.notice, langKey);
 
-  card.append(head, description, reason);
+  card.append(head, description);
+  if (reason.textContent) card.append(reason);
   const presenceNode = document.createElement("p");
   presenceNode.className = "provider-presence";
   presenceNode.textContent = localizedText(provider.presenceNote, langKey);
@@ -2498,7 +2468,7 @@ function providerCard(provider) {
 // system browser on the user's behalf. Nothing is posted automatically: the
 // user presses Create on GitHub, having seen the whole body first.
 
-let reportProvider = null;
+let reportProviderId = "";
 let reportRequest = null;
 let reportTimer = 0;
 let reportSeq = 0;
@@ -2523,7 +2493,7 @@ async function refreshReport() {
   try {
     const data = await api("api/report", {
       method: "POST",
-      body: { provider: reportProvider, note, language: langKey },
+      body: { provider: reportProviderId, note, language: langKey },
     });
     if (seq !== reportSeq) return;
     reportRequest = data?.report ?? null;
@@ -2545,26 +2515,15 @@ function scheduleReport() {
 }
 
 function openReportDialog(provider) {
-  // Only the fields the report needs cross into the dialog. Nothing else from
-  // the provider object (and nothing from an account) is sent back to the
-  // service, so a report can never carry more than the card already shows.
-  reportProvider = {
-    id: provider.id,
-    name: provider.name,
-    capabilityState: provider.capability?.state || provider.capabilityState,
-    capabilityReason: provider.capability?.reason || provider.capabilityReason,
-    description: provider.description,
-    notice: provider.notice,
-    authMethods: provider.authMethods,
-    sources: provider.sources,
-    pluginPackage: provider.pluginPackage,
-  };
+  // Only the id crosses into the dialog. The service resolves every field it
+  // puts in the report from that id, so the page cannot choose what a report
+  // says about a card — only which card and what the reporter typed.
+  reportProviderId = String(provider.id || "");
   reportRequest = null;
   setReportError("");
   setReportStatus("");
   byId("report-note").value = "";
-  const status = providerStatusView(provider, text);
-  byId("report-card").textContent = `${provider.name || provider.id} · ${status.label}`;
+  byId("report-card").textContent = provider.name || provider.id;
   const dialog = byId("report-dialog");
   if (typeof dialog.showModal === "function") dialog.showModal();
   else dialog.setAttribute("open", "");
@@ -4013,16 +3972,11 @@ function accountDisplay(account) {
   return accountView({ ...account, providerLabel: entry?.name || view.providerLabel || view.provider });
 }
 
-// An account is flagged when the provider's own sign-in capability has not
-// been verified yet (or the ledger itself says so). No hard-coded account is
-// ever marked: both sources are real API data.
-function accountUnverified(account) {
-  if (account?.unverified === true) return true;
-  const view = accountView(account);
-  const entry = accountProviderEntry(view.provider);
-  if (!entry) return false;
-  return providerStatusView(entry, text).state !== "ready";
-}
+// The account row shows the name, the provider and the key. It used to add an
+// "unverified flow" tag for accounts that came from a provider whose sign-in
+// was still marked pending. That tag is gone: nothing a user does can ever
+// clear the flag, so it only ever told people their own working account looked
+// suspicious.
 
 function gradeTone(grade) {
   if (grade === "A" || grade === "B") return "good";
@@ -4061,13 +4015,6 @@ function accountRow(account) {
   const strong = document.createElement("strong");
   strong.textContent = view.name;
   line.append(strong);
-  if (accountUnverified(account)) {
-    const tag = document.createElement("span");
-    tag.className = "unverified-tag";
-    tag.textContent = text.accountUnverified;
-    tag.title = text.accountUnverifiedTitle;
-    line.append(tag);
-  }
   const small = document.createElement("small");
   small.textContent = `${view.providerLabel} · ${view.key}`;
   name.append(line, small);
