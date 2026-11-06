@@ -79,6 +79,12 @@ function accountCountOf(accountCounts, id) {
 // nothing can be called "usable now", and hiding every card behind a closed
 // fold would be worse than the old single grid, so the split then degrades to
 // "everything in the main list".
+//
+// A catalogue card is the one exception to that degradation: it is an offer
+// (nothing on this machine can sign into it yet, so it carries no add entry),
+// and magpie's market offers dozens of them. Promoting those to the main list
+// would fill "what I can use now" with things I cannot use, so they wait in
+// the collapsed region whatever the state of magpie's list.
 export function partitionProviders(items = [], accountCounts = {}) {
   const cards = (Array.isArray(items) ? items : []).filter((item) => item && item.id);
   const magpieKnown = cards.some(
@@ -88,6 +94,10 @@ export function partitionProviders(items = [], accountCounts = {}) {
   const other = [];
   for (const provider of cards) {
     if (!providerIsSubscription(provider)) continue;
+    if (provider.presence === "catalog") {
+      other.push(provider);
+      continue;
+    }
     if (!magpieKnown || providerIsPrimary(provider)) primary.push(provider);
     else other.push(provider);
   }
