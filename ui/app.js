@@ -15,6 +15,7 @@ import { isScoreActive, isScoreSettled, scoreView } from "./proxy-score.js";
 import {
   PLUGIN_SCAN_POLL_INTERVAL_MS,
   PLUGIN_SCAN_POLL_MAX_ATTEMPTS,
+  filterProviders,
   localizedText,
   methodCategory,
   methodCategoryText,
@@ -64,6 +65,11 @@ const messages = {
     providersCopy: "Supported providers and their current sign-in readiness.",
     providersEmptyTitle: "No providers yet",
     providersEmptyCopy: "Supported providers appear here when the local service is ready.",
+    providersSearchLabel: "Search",
+    providersSearchPlaceholder: "Name, id or plugin",
+    providersSearchCount: "Showing {shown} / {total}",
+    providersNoMatchTitle: "No provider matches",
+    providersNoMatchCopy: "Try a shorter word, a provider id, or the plugin that provides the sign-in.",
     providersMoreTitle: "Other subscription providers",
     providersMoreHint: "Every other subscription service the local data knows about: magpie's own providers, and the plugins written for magpie and checked against its built-in sign-in.",
     providersSourceMagpie: "List derived from magpie",
@@ -427,6 +433,11 @@ const messages = {
     providersCopy: "受支持的供应商及其当前的登录就绪状态。",
     providersEmptyTitle: "还没有供应商",
     providersEmptyCopy: "本地服务就绪后，支持的供应商会显示在这里。",
+    providersSearchLabel: "搜索",
+    providersSearchPlaceholder: "名称、ID 或插件",
+    providersSearchCount: "已筛选 {shown} / 共 {total}",
+    providersNoMatchTitle: "没有匹配的供应商",
+    providersNoMatchCopy: "试试更短的关键词、供应商 ID，或提供该登录方式的插件名。",
     providersMoreTitle: "其他订阅类供应商",
     providersMoreHint: "其余订阅类供应商都在这里：magpie 自带的，以及为 magpie 编写、对照过内置登录的插件。",
     providersSourceMagpie: "名单来自 magpie",
@@ -790,6 +801,11 @@ const messages = {
     providersCopy: "支援的供應商及其目前的登入就緒狀態。",
     providersEmptyTitle: "還沒有供應商",
     providersEmptyCopy: "本機服務就緒後，支援的供應商會顯示在這裡。",
+    providersSearchLabel: "搜尋",
+    providersSearchPlaceholder: "名稱、ID 或外掛",
+    providersSearchCount: "已篩選 {shown} / 共 {total}",
+    providersNoMatchTitle: "沒有符合的供應商",
+    providersNoMatchCopy: "試試更短的關鍵字、供應商 ID，或提供該登入方式的外掛名稱。",
     providersMoreTitle: "其他訂閱類供應商",
     providersMoreHint: "其餘訂閱類供應商都在這裡：magpie 內建的，以及為 magpie 撰寫、對照過內建登入的外掛。",
     providersSourceMagpie: "名單來自 magpie",
@@ -1153,6 +1169,11 @@ const messages = {
     providersCopy: "対応プロバイダーと現在のログイン準備状況です。",
     providersEmptyTitle: "プロバイダーがありません",
     providersEmptyCopy: "ローカルサービスが準備できると、対応プロバイダーがここに表示されます。",
+    providersSearchLabel: "検索",
+    providersSearchPlaceholder: "名前・ID・プラグイン",
+    providersSearchCount: "表示 {shown} / {total}",
+    providersNoMatchTitle: "一致するプロバイダーがありません",
+    providersNoMatchCopy: "短いキーワード、プロバイダーの ID、またはそのサインインを提供するプラグイン名で試してください。",
     providersMoreTitle: "その他のサブスクリプション",
     providersMoreHint: "残りのサブスクリプション提供元はここにすべて入ります。magpie 内蔵のものと、magpie 向けに作られ内蔵サインインと突き合わせ済みのプラグインです。",
     providersSourceMagpie: "magpie から取得した一覧",
@@ -1573,6 +1594,9 @@ let clearingAccount = false;
 // seeded with local rows. Its view state lives only in this document, like
 // the proxy filters.
 let providerCatalog = [];
+// What the Providers tab is currently being narrowed to. Kept here so a data
+// refresh re-renders the same search instead of silently widening the list.
+let providerQuery = "";
 let accountQuery = "";
 let accountFilter = "all";
 let accountSort = "lastLogin";
@@ -1696,6 +1720,8 @@ function applyText() {
   byId("providers-empty-copy").textContent = text.providersEmptyCopy;
   byId("providers-more-title").textContent = text.providersMoreTitle;
   byId("providers-more-hint").textContent = text.providersMoreHint;
+  byId("providers-search-label").textContent = text.providersSearchLabel;
+  byId("providers-search").placeholder = text.providersSearchPlaceholder;
   byId("environment-title").textContent = text.environmentTitle;
   byId("environment-copy").textContent = text.environmentCopy;
   byId("environment-size-label").textContent = text.environmentSizeLabel;
@@ -3534,15 +3560,40 @@ function renderProviders(items) {
   const empty = byId("providers-empty");
   byId("provider-count").textContent = String(providerCatalog.length);
   const { primary, other } = partitionProviders(providerCatalog, accountCounts());
-  empty.hidden = primary.length + other.length > 0;
-  list.hidden = primary.length === 0;
+  // The query narrows both grids, the collapsed one included: a provider the
+  // user cannot find is the same to them as a provider that is not there.
+  const searching = providerQuery.trim().length > 0;
+  const shownPrimary = filterProviders(primary, providerQuery, langKey);
+  const shownOther = filterProviders(other, providerQuery, langKey);
+  const shown = shownPrimary.length + shownOther.length;
+  byId("providers-search-status").textContent = searching
+    ? text.providersSearchCount
+      .replace("{shown}", String(shown))
+      .replace("{total}", String(providerCatalog.length))
+    : "";
+  // An empty grid means two different things and they are not the same
+  // message: nothing is installed yet, or nothing matched what was typed.
+  const noMatch = searching && providerCatalog.length > 0;
+  byId("providers-empty-title").textContent = noMatch ? text.providersNoMatchTitle : text.providersEmptyTitle;
+  byId("providers-empty-copy").textContent = noMatch ? text.providersNoMatchCopy : text.providersEmptyCopy;
+  empty.hidden = shown > 0;
+  list.hidden = shownPrimary.length === 0;
   list.textContent = "";
-  for (const provider of primary) list.append(providerCard(provider));
+  for (const provider of shownPrimary) list.append(providerCard(provider));
   if (!more) return;
-  more.hidden = other.length === 0;
-  byId("providers-more-count").textContent = String(other.length);
+  more.hidden = shownOther.length === 0;
+  byId("providers-more-count").textContent = String(shownOther.length);
   moreList.textContent = "";
-  for (const provider of other) moreList.append(providerCard(provider));
+  for (const provider of shownOther) moreList.append(providerCard(provider));
+}
+
+// A match behind the collapsed section would be a hidden answer, so a search
+// opens it. Done on the keystroke rather than in renderProviders, so a data
+// refresh never re-opens a section the user closed on purpose.
+function revealProviderMatches() {
+  const more = byId("providers-more");
+  if (!more || more.hidden) return;
+  if (byId("providers-more-list").children.length > 0) more.open = true;
 }
 
 function render(data) {
@@ -4841,6 +4892,15 @@ function cleanupAccountCheck() {
 applyText();
 byId("tab-providers").addEventListener("click", () => selectTab("providers"));
 byId("tab-proxies").addEventListener("click", () => selectTab("proxies"));
+// Searching re-renders on every keystroke; the list is a few dozen cards, so
+// there is nothing to debounce. `search` covers the browser's own clear (x).
+for (const event of ["input", "search"]) {
+  byId("providers-search").addEventListener(event, (nativeEvent) => {
+    providerQuery = nativeEvent.target.value;
+    renderProviders(providerCatalog);
+    revealProviderMatches();
+  });
+}
 byId("retry").addEventListener("click", () => location.reload());
 byId("add-proxy").addEventListener("click", () => openProxyDialog());
 byId("add-proxy-empty").addEventListener("click", () => openProxyDialog());
