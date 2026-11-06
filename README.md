@@ -1,14 +1,14 @@
-# Clean Login · 干净登录
+# Magpie Clean Login · 干净登录
 
-[![tag](https://img.shields.io/github/v/tag/Gruu6y/clean-login?style=flat-square)](https://github.com/Gruu6y/clean-login/tags)
-[![ci](https://github.com/Gruu6y/clean-login/actions/workflows/ci.yml/badge.svg)](https://github.com/Gruu6y/clean-login/actions/workflows/ci.yml)
+[![tag](https://img.shields.io/github/v/tag/Gruu6y/magpie-clean-login?style=flat-square)](https://github.com/Gruu6y/magpie-clean-login/tags)
+[![ci](https://github.com/Gruu6y/magpie-clean-login/actions/workflows/ci.yml/badge.svg)](https://github.com/Gruu6y/magpie-clean-login/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
 **One page inside [magpie](https://usemagpie.ai) to manage proxy exits and provider sign-ins — each account gets its own clean browser, its own pinned fingerprint, and the exit you choose for it.**
 
 ![The Providers tab: the three-tab header, search, one-time browser setup and the first provider cards](assets/screenshot-providers.png)
 
-> **Unofficial plugin.** Clean Login is built and maintained here, at [Gruu6y/clean-login](https://github.com/Gruu6y/clean-login). It is **not** published by `magpie-community`, and nobody has reviewed it but you. Read the code, open an issue, send a pull request — all three are welcome.
+> **Unofficial plugin.** Clean Login is built and maintained here, at [Gruu6y/magpie-clean-login](https://github.com/Gruu6y/magpie-clean-login). It is **not** published by `magpie-community`, and nobody has reviewed it but you. Read the code, open an issue, send a pull request — all three are welcome.
 
 <details>
 <summary><strong>简体中文 · 安装与快速开始</strong></summary>
@@ -71,7 +71,7 @@ bun bin/clean-login.mjs signin code 123456
 | Disk | ≈ 170 MB download, ≈ 616 MB on disk, ≈ 1.02 GB free to install — once |
 | Network | Only for the calls you start: proxy tests, the trust-score and identity-check pages, the runtime download, and the provider's own sign-in |
 
-Other platforms are not supported yet; platform requests belong in the [issue tracker](https://github.com/Gruu6y/clean-login/issues).
+Other platforms are not supported yet; platform requests belong in the [issue tracker](https://github.com/Gruu6y/magpie-clean-login/issues).
 
 ## Install
 
@@ -79,7 +79,7 @@ Other platforms are not supported yet; platform requests belong in the [issue tr
 2. Find **Clean Login** by **Gruu6y** and press **Install**. If the list has not caught up yet, press **Retry** — magpie caches what GitHub told it.
 3. Open **Clean Login** from the sidebar.
 
-Every version is tagged (`v0.1.x`) in this repository; the [tag list](https://github.com/Gruu6y/clean-login/tags) is the version history.
+Every version is tagged (`v0.1.x`) in this repository; the [tag list](https://github.com/Gruu6y/magpie-clean-login/tags) is the version history.
 
 ## Quick start
 
@@ -162,7 +162,7 @@ Run `bun bin/clean-login.mjs help` for the full command list. A remote service (
 | A sign-in failed with `no_url` or `method_input_required` | The plugin asked for a value (a phone number, a site, a key) that the dialog did not collect. Fill the field and retry; if it keeps failing, use **Report a problem** on the card. |
 | Proxy test fails | The test makes a real connection through that exit and never falls back to a direct one. Check the host, port, credentials and whether the exit allows the target. |
 | A signed-in account looks like a new machine | Check its pinned fingerprint on **Accounts**. Signing back in reuses the same identity; deleting the account data removes it. |
-| Something else | Open an [issue](https://github.com/Gruu6y/clean-login/issues) with what you expected, what happened, and which provider or proxy was involved. A screenshot of the message is worth a lot. Please never paste real tokens or proxy passwords into an issue. |
+| Something else | Open an [issue](https://github.com/Gruu6y/magpie-clean-login/issues) with what you expected, what happened, and which provider or proxy was involved. A screenshot of the message is worth a lot. Please never paste real tokens or proxy passwords into an issue. |
 
 ## Privacy and where your data lives
 
@@ -177,4 +177,4 @@ Pull requests are welcome. The suite is the contract: `bun test` runs everything
 
 ## License
 
-[MIT](LICENSE) © 2026 Gruu6y. [Tag list / version history](https://github.com/Gruu6y/clean-login/tags) · [Reporting a problem](docs/reporting.md) · [CI](https://github.com/Gruu6y/clean-login/actions/workflows/ci.yml)
+[MIT](LICENSE) © 2026 Gruu6y. [Tag list / version history](https://github.com/Gruu6y/magpie-clean-login/tags) · [Reporting a problem](docs/reporting.md) · [CI](https://github.com/Gruu6y/magpie-clean-login/actions/workflows/ci.yml)
