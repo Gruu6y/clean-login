@@ -6,11 +6,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   signInActive,
+  signInInputs,
   signInMethodLabel,
   signInPayload,
   signInProxy,
   signInSettled,
 } from "../ui/signin-state.js";
+import { signInMethodFields } from "../ui/provider-state.js";
 
 const root = join(import.meta.dir, "..");
 const app = readFileSync(join(root, "ui", "app.js"), "utf8");
@@ -79,6 +81,100 @@ test("signInPayload carries the chosen method label, and omits it when there is 
   expect(signInMethodLabel("")).toBeNull();
   expect(signInMethodLabel(null)).toBeNull();
   expect(signInMethodLabel(42)).toBeNull();
+});
+
+// A method that asks something before it starts (ZCode's team picker, Qoder
+// CN's VPC instance, a PAT) declares prompts. The dialog renders them from the
+// card's already-projected fields and sends the answers with the request, so a
+// method never starts with a silent default.
+test("the dialog renders the chosen method's declared fields and sends the answers", () => {
+  const dialog = /<dialog id="signin-dialog"[\s\S]*?<\/dialog>/.exec(html)?.[0] || "";
+  expect(dialog).toContain('id="signin-inputs-field"');
+  expect(dialog).toContain('id="signin-inputs"');
+  expect(dialog).toContain('id="signin-inputs-hint"');
+  // Still no submit control: the fields are plain inputs in an allow-scripts frame.
+  expect(dialog).not.toContain('type="submit"');
+
+  expect(app).toContain("function renderSignInInputs(provider)");
+  expect(app).toContain("function selectedSignInInputs()");
+  expect(app).toContain("signInMethodFields(provider, selectedSignInMethod())");
+  expect(app).toContain("selectedSignInInputs(),");
+  // Switching the method rebuilds the fields from that method's own prompts.
+  expect(app).toContain('byId("signin-method").addEventListener("change"');
+  expect(app).toContain("renderSignInInputs(signInContext.card)");
+  // A masked answer stays masked, and a select carries the plugin's own options.
+  expect(app).toContain('item.type === "password" ? "password" : "text"');
+  expect(app).toContain("node.value = option.value");
+  const inputsCode =
+    /function renderSignInInputs[\s\S]*?function selectedSignInInputs[\s\S]*?\n\}/.exec(app)?.[0] || "";
+  expect(inputsCode).not.toMatch(/alert\(|confirm\(|window\.open|localStorage|innerHTML/);
+});
+
+test("signInMethodFields picks the fields of the chosen method only", () => {
+  const card = {
+    signInMethods: ["Provider team", "Provider PAT"],
+    authMethods: [
+      {
+        type: "oauth",
+        label: "Provider team",
+        runnable: true,
+        category: "browser",
+        fields: [
+          {
+            type: "select",
+            key: "site",
+            message: "Where is the plan?",
+            options: [{ label: "Z.ai", value: "zai" }],
+          },
+        ],
+      },
+      {
+        type: "oauth",
+        label: "Provider PAT",
+        runnable: true,
+        category: "secret",
+        fields: [{ type: "password", key: "pat", message: "Your token", options: [] }],
+      },
+    ],
+  };
+  expect(signInMethodFields(card, "Provider PAT")).toEqual([
+    { type: "password", key: "pat", message: "Your token", options: [] },
+  ]);
+  // No explicit pick: the first method the dialog would run.
+  expect(signInMethodFields(card)).toEqual([
+    {
+      type: "select",
+      key: "site",
+      message: "Where is the plan?",
+      options: [{ label: "Z.ai", value: "zai" }],
+    },
+  ]);
+  // A method with no prompts, an unknown label, and an empty card.
+  expect(signInMethodFields({ authMethods: [{ label: "x", fields: [] }] }, "x")).toEqual([]);
+  expect(signInMethodFields(card, "nope")).toEqual([]);
+  expect(signInMethodFields({})).toEqual([]);
+});
+
+test("signInPayload sends only the filled answers, and omits the key when none", () => {
+  expect(signInPayload("zcode", null, "team", null, { site: "bigmodel" })).toEqual({
+    provider: "zcode",
+    proxy: null,
+    methodLabel: "team",
+    inputs: { site: "bigmodel" },
+  });
+  expect(signInPayload("zcode", null, "team", null, { site: "  " })).toEqual({
+    provider: "zcode",
+    proxy: null,
+    methodLabel: "team",
+  });
+  expect(signInPayload("zcode", null, "team", null, {})).toEqual({
+    provider: "zcode",
+    proxy: null,
+    methodLabel: "team",
+  });
+  expect(signInInputs({ site: " zai ", pat: 42, "": "x" })).toEqual({ site: "zai" });
+  expect(signInInputs(null)).toBeNull();
+  expect(signInInputs(["site"])).toBeNull();
 });
 
 test("the dialog shows the required opened message and stops polling on close", () => {

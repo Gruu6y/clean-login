@@ -21,6 +21,7 @@ import {
   partitionProviders,
   providerCanSignIn,
   shouldPollPluginScan,
+  signInMethodFields,
 } from "./provider-state.js";
 import { signInActive, signInPayload } from "./signin-state.js";
 import {
@@ -110,6 +111,8 @@ const messages = {
     signInProxyDirect: "No proxy (direct)",
     signInMethodLabel: "Sign-in method",
     signInMethodHint: "This provider offers several sign-in methods. Pick the one you want; the wrong one signs you in to the wrong site.",
+    signInInputChoose: "Choose…",
+    signInInputHint: "This sign-in needs these details before it can start.",
     signInStart: "Start sign-in",
     signInStarting: "Starting…",
     signInOpened: "The sign-in page is open in an isolated browser window. Please complete the sign-in in that window.",
@@ -458,6 +461,8 @@ const messages = {
     signInProxyDirect: "不使用代理（直连）",
     signInMethodLabel: "登录方式",
     signInMethodHint: "该供应商提供了多个登录方式，请选择你要用的那一个；选错会登录到错误的站点。",
+    signInInputChoose: "请选择…",
+    signInInputHint: "这个登录方式在开始前需要填写下面这些信息。",
     signInStart: "开始登录",
     signInStarting: "正在开始…",
     signInOpened: "已在隔离浏览器窗口打开登录页，请在那个窗口里完成登录。",
@@ -806,6 +811,8 @@ const messages = {
     signInProxyDirect: "不使用代理（直連）",
     signInMethodLabel: "登入方式",
     signInMethodHint: "該供應商提供了多個登入方式，請選擇你要用的那一個；選錯會登入到錯誤的站點。",
+    signInInputChoose: "請選擇…",
+    signInInputHint: "這個登入方式在開始前需要填寫下面這些資訊。",
     signInStart: "開始登入",
     signInStarting: "正在開始…",
     signInOpened: "已在隔離瀏覽器視窗開啟登入頁，請在那個視窗裡完成登入。",
@@ -1154,6 +1161,8 @@ const messages = {
     signInProxyDirect: "プロキシを使用しない（直接接続）",
     signInMethodLabel: "ログイン方法",
     signInMethodHint: "このプロバイダーには複数のログイン方法があります。使うものを選んでください。選び違うと別のサイトへログインしてしまいます。",
+    signInInputChoose: "選択してください…",
+    signInInputHint: "このログイン方法は開始前に次の入力が必要です。",
     signInStart: "ログインを開始",
     signInStarting: "開始しています…",
     signInOpened: "隔離されたブラウザーウィンドウでログインページを開きました。そのウィンドウでログインを完了してください。",
@@ -2801,6 +2810,75 @@ function selectedSignInMethod() {
   return typeof value === "string" && value ? value : null;
 }
 
+// The fields the chosen method needs filled before it can start: a team's site,
+// an enterprise VPC instance or a dedicated domain, a Personal Access Token.
+// They come from the plugin's own declared prompts, already projected by the
+// service (type, key, the plugin's question, a select's options), so the page
+// renders them and sends the answers back with the request. Nothing is
+// remembered: closing the dialog discards them.
+function renderSignInInputs(provider) {
+  const field = byId("signin-inputs-field");
+  const host = byId("signin-inputs");
+  const hint = byId("signin-inputs-hint");
+  if (!field || !host) return;
+  const fields = signInMethodFields(provider, selectedSignInMethod());
+  host.textContent = "";
+  if (fields.length === 0) {
+    field.hidden = true;
+    if (hint) hint.hidden = true;
+    return;
+  }
+  fields.forEach((item, index) => {
+    const wrap = document.createElement("div");
+    wrap.className = "field signin-input";
+    const id = `signin-input-${index}`;
+    const label = document.createElement("label");
+    label.setAttribute("for", id);
+    label.textContent = item.message || item.key;
+    wrap.append(label);
+    if (item.type === "select" && Array.isArray(item.options) && item.options.length > 0) {
+      const select = document.createElement("select");
+      select.id = id;
+      select.dataset.inputKey = item.key;
+      const blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = text.signInInputChoose;
+      select.append(blank);
+      for (const option of item.options) {
+        const node = document.createElement("option");
+        node.value = option.value;
+        node.textContent = option.label || option.value;
+        select.append(node);
+      }
+      wrap.append(select);
+    } else {
+      const input = document.createElement("input");
+      input.id = id;
+      input.type = item.type === "password" ? "password" : "text";
+      input.dataset.inputKey = item.key;
+      input.autocomplete = "off";
+      input.spellcheck = false;
+      wrap.append(input);
+    }
+    host.append(wrap);
+  });
+  field.hidden = false;
+  if (hint) {
+    hint.hidden = false;
+    hint.textContent = text.signInInputHint;
+  }
+}
+
+function selectedSignInInputs() {
+  const host = byId("signin-inputs");
+  if (!host || byId("signin-inputs-field")?.hidden) return null;
+  const values = {};
+  for (const node of host.querySelectorAll("[data-input-key]")) {
+    values[node.dataset.inputKey] = node.value;
+  }
+  return values;
+}
+
 // The identities of this provider that are signed out. Continuing one of them
 // reuses its fingerprint instead of drawing a new one.
 function renderSignInAccounts(provider) {
@@ -2868,6 +2946,9 @@ function openSignInDialog(provider, options = {}) {
   if (dialog.open || !providerCanSignIn(provider)) return;
   signInContext = {
     provider: provider.signInProvider,
+    // The card itself, kept for the method picker: switching method rebuilds
+    // the input fields from that method's own declared prompts.
+    card: provider,
     name: provider.name || provider.signInProvider,
     preselectAccountKey: typeof options.accountKey === "string" ? options.accountKey : "",
     flow: null,
@@ -2875,6 +2956,7 @@ function openSignInDialog(provider, options = {}) {
   };
   byId("signin-provider").textContent = signInContext.name;
   renderSignInMethods(provider);
+  renderSignInInputs(provider);
   renderSignInAccounts(provider);
   renderSignInProxies();
   renderSignInPreselection();
@@ -2931,6 +3013,7 @@ async function startSignIn() {
         selectedSignInProxy(),
         selectedSignInMethod(),
         selectedSignInAccount(),
+        selectedSignInInputs(),
       ),
     });
     if (signInContext !== context) return;
@@ -4582,6 +4665,11 @@ byId("score-cancel").addEventListener("click", cancelScore);
 byId("environment-prepare").addEventListener("click", prepareEnvironment);
 byId("environment-cancel").addEventListener("click", cancelEnvironment);
 byId("environment-retry").addEventListener("click", prepareEnvironment);
+// The chosen method decides which fields are needed, so the field block is
+// rebuilt on every change instead of only when the dialog opens.
+byId("signin-method").addEventListener("change", () => {
+  if (signInContext) renderSignInInputs(signInContext.card);
+});
 byId("signin-start").addEventListener("click", startSignIn);
 byId("signin-cancel").addEventListener("click", cancelSignIn);
 byId("signin-close").addEventListener("click", closeSignInDialog);

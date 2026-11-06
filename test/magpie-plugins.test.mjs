@@ -34,12 +34,12 @@ test("a browser oauth method is a browser method", () => {
   }
 });
 
-// The third state: an oauth method with an authorize function whose label does
-// not explicitly name a browser sign-in is NOT forced into `browser`. A PAT
-// form, a device code or an enterprise VPC flow may not be a web page. It is
-// reported as `pending`: the method IS runnable, only its kind is unconfirmed
-// until authorize() runs.
-test("an ambiguous oauth method is reported as pending, not browser", () => {
+// Every runnable oauth method that is not a local-session reuse ends in a page
+// the browser opens: an authorize URL, a device-confirmation page, a vendor's
+// integrations page for a pasted token. The scan cannot name the exact kind from
+// a label, and it no longer pretends the kind is unknown — the label is not
+// evidence enough to call a real sign-in unsupported.
+test("an oauth method whose label names no kind is still a browser flow", () => {
   for (const label of [
     "Kiro (Google, GitHub, AWS Builder ID, IAM Identity Center)",
     "Minimax Code account",
@@ -50,8 +50,7 @@ test("an ambiguous oauth method is reported as pending, not browser", () => {
     "Loomy 手机验证码登录（讯飞）",
   ]) {
     const method = classifyMethod({ type: "oauth", label, authorize: () => {} });
-    expect(method.browser).toBe(false);
-    expect(method.category).toBe("pending");
+    expect(method.category).toBe("browser");
     expect(method.runnable).toBe(true);
   }
 });
@@ -243,11 +242,13 @@ test("scanMagpiePlugins finds providers in every scope under node_modules", asyn
     expect(scan.providers.map((provider) => provider.id).sort()).toEqual(["alpha", "loomy"]);
     const loomy = scan.providers.find((provider) => provider.id === "loomy");
     expect(loomy.package).toBe("@roadkid/pkg-b");
+    // A runnable oauth method is a browser flow whatever its label says: the
+    // exact kind (page, device code, token exchange) is decided by authorize().
     expect(loomy.methods[0]).toEqual({
       type: "oauth",
       label: "Sign in with loomy PAT",
-      browser: false,
-      category: "pending",
+      browser: true,
+      category: "browser",
       prompts: [],
       runnable: true,
     });
