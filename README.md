@@ -4,7 +4,7 @@
 [![ci](https://github.com/Gruu6y/magpie-clean-login/actions/workflows/ci.yml/badge.svg)](https://github.com/Gruu6y/magpie-clean-login/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-**One page inside [magpie](https://usemagpie.ai) to manage proxy exits and provider sign-ins — each account gets its own clean browser, its own pinned fingerprint, and the exit you choose for it.**
+**Magpie Clean Login (CL · 干净登录) is an unofficial [magpie](https://usemagpie.ai) plugin for provider sign-ins: one page to manage proxy exits, where every account signs in through its own isolated browser identity and its own chosen proxy. The canonical repository is [github.com/Gruu6y/magpie-clean-login](https://github.com/Gruu6y/magpie-clean-login).**
 
 ![The Providers tab: the three-tab header, search, one-time browser setup and the first provider cards](assets/screenshot-providers.png)
 
