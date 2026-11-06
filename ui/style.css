@@ -407,6 +407,23 @@ main { flex: 1; }
   background: color-mix(in srgb, #c2764f 16%, transparent);
   color: color-mix(in srgb, #c2764f 80%, var(--text));
 }
+.provider-origin {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+.provider-origin[data-origin="plugin"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 .provider-name {
   min-width: 0;
   margin: 0;

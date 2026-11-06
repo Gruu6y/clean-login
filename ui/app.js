@@ -90,6 +90,8 @@ const messages = {
     providerPluginsFailed: "Installed plugin scan failed: {error}",
     providerPluginsScanTimedOut: "The installed-plugin scan is still running. Reload the page to see its result.",
     addAccount: "Add account",
+    providerOriginPlugin: "Plugin",
+    providerOriginMagpie: "magpie built-in",
     reportIssue: "Report a problem",
     reportTitle: "Report a problem",
     reportCopy: "The text is already written for you. One click opens GitHub's new-issue page in your browser with the title and body filled in; you only press Create.",
@@ -447,6 +449,8 @@ const messages = {
     providerPluginsFailed: "已安装插件扫描失败：{error}",
     providerPluginsScanTimedOut: "已安装插件扫描仍在进行。刷新页面以查看结果。",
     addAccount: "添加账号",
+    providerOriginPlugin: "第三方插件",
+    providerOriginMagpie: "magpie 自带",
     reportIssue: "报告问题",
     reportTitle: "报告问题",
     reportCopy: "正文已经帮你写好了。点一下就会用系统默认浏览器打开 GitHub 的新建 issue 页面，标题和正文都填好，你只要再点 Create 就发出去了。",
@@ -804,6 +808,8 @@ const messages = {
     providerPluginsFailed: "已安裝外掛掃描失敗：{error}",
     providerPluginsScanTimedOut: "已安裝外掛掃描仍在進行。重新整理頁面以查看結果。",
     addAccount: "新增帳號",
+    providerOriginPlugin: "第三方外掛",
+    providerOriginMagpie: "magpie 自帶",
     reportIssue: "回報問題",
     reportTitle: "回報問題",
     reportCopy: "正文已經幫你寫好了。點一下就會用系統預設瀏覽器開啟 GitHub 的新建 issue 頁面，標題和正文都填好，你只要再點 Create 就送出去了。",
@@ -1161,6 +1167,8 @@ const messages = {
     providerPluginsFailed: "インストール済みプラグインのスキャンに失敗しました：{error}",
     providerPluginsScanTimedOut: "インストール済みプラグインのスキャンはまだ実行中です。ページを再読み込みすると結果が表示されます。",
     addAccount: "アカウントを追加",
+    providerOriginPlugin: "プラグイン",
+    providerOriginMagpie: "magpie 内蔵",
     reportIssue: "問題を報告",
     reportTitle: "問題を報告",
     reportCopy: "本文はすでに用意されています。クリックすると既定のブラウザで GitHub の新しい issue が開き、タイトルと本文が入力済みです。Create を押すだけで投稿できます。",
@@ -2408,7 +2416,22 @@ function providerCard(provider) {
   name.className = "provider-name";
   name.textContent = provider.name || provider.id;
 
+  // Where the card came from is a fact the user needs in order to judge it:
+  // one of magpie's own subscriptions, or a provider a plugin someone
+  // installed exposes. The three entries in this plugin's own registry are
+  // this plugin, so they carry no tag.
+  const origin =
+    provider.presence === "plugin-only" ? "plugin" : provider.presence === "magpie-only" ? "magpie" : "";
+
   head.append(mark, name);
+
+  if (origin) {
+    const originTag = document.createElement("span");
+    originTag.className = "provider-origin";
+    originTag.dataset.origin = origin;
+    originTag.textContent = origin === "plugin" ? text.providerOriginPlugin : text.providerOriginMagpie;
+    head.append(originTag);
+  }
 
   const description = document.createElement("p");
   description.className = "provider-description";
