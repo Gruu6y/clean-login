@@ -206,7 +206,8 @@ test("/api/provider-sources reports the injected plugin scan and its derived met
     { type: "oauth", label: "brand-new CLI's sign-in", browser: false, category: "local", prompts: [], runnable: true },
     { type: "api", label: "Brand New API key", browser: false, category: "key", prompts: [], runnable: false },
   ]);
-  expect(byId["brand-new"].capability.reason.en).toContain("has not verified");
+  expect(byId["brand-new"].capability.reason.en).toContain("browser sign-in method");
+  expect(byId["brand-new"].capability.reason.en).not.toMatch(/not verified|unverified/i);
   // The response still carries no button wording and no authorize function.
   expect(res.body).not.toMatch(/Add Account|authorize/i);
 });
