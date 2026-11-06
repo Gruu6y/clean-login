@@ -332,6 +332,62 @@ main { flex: 1; }
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
 }
+
+/* The one collapsed catalog under the main provider list. A native <details>
+   keeps the region closed by default without adding a button, so the page still
+   ships no dead controls, and the count stays visible on the summary so a
+   closed fold never looks like an empty page. */
+.providers-more {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.providers-more-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+.providers-more-summary::-webkit-details-marker {
+  display: none;
+}
+.providers-more-summary::before {
+  content: "▸";
+  color: var(--muted);
+  font-size: 11px;
+  transition: transform 0.15s ease;
+}
+.providers-more[open] > .providers-more-summary::before {
+  transform: rotate(90deg);
+}
+.providers-more-count {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.providers-more-hint {
+  margin: 0 16px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.providers-more .provider-grid {
+  margin: 0 16px 16px;
+}
+.providers-more .provider-sources {
+  margin: 0 16px 16px;
+}
 .provider-card {
   display: flex;
   flex-direction: column;

@@ -45,10 +45,6 @@
             <p id="providers-copy">Supported providers and their current sign-in readiness.</p>
           </div>
         </div>
-        <div class="provider-sources" id="provider-sources" hidden>
-          <span class="provider-sources-badge" id="provider-sources-badge"></span>
-          <span class="provider-sources-note" id="provider-sources-note"></span>
-        </div>
         <div class="setup-card" id="environment-setup" hidden>
           <div class="setup-head">
             <h3 id="environment-title">Login browser setup</h3>
@@ -100,6 +96,18 @@
           <p id="providers-empty-copy">Supported providers appear here when the local service is ready.</p>
         </div>
         <div class="provider-grid" id="providers-list" hidden></div>
+        <details class="providers-more" id="providers-more" hidden>
+          <summary class="providers-more-summary">
+            <span class="providers-more-title" id="providers-more-title">Other subscription providers</span>
+            <span class="providers-more-count" id="providers-more-count">0</span>
+          </summary>
+          <p class="providers-more-hint" id="providers-more-hint">Every other subscription service the local data knows about: magpie's own providers, and the plugins written for magpie and checked against its built-in sign-in.</p>
+          <div class="provider-grid" id="providers-more-list"></div>
+          <div class="provider-sources" id="provider-sources" hidden>
+            <span class="provider-sources-badge" id="provider-sources-badge"></span>
+            <span class="provider-sources-note" id="provider-sources-note"></span>
+          </div>
+        </details>
       </section>
 
       <section class="panel" id="panel-proxies" role="tabpanel" aria-labelledby="tab-proxies" hidden>

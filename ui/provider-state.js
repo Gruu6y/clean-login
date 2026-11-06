@@ -44,6 +44,72 @@ export function providerCanSignIn(provider) {
   return Boolean(provider?.browserMethod && provider?.signInProvider);
 }
 
+// --- the main list and the one collapsed catalog -------------------------
+//
+// The page shows what a user can sign in to right now in the main list and
+// keeps every other subscription provider in a single collapsed region. The
+// split is drawn from card fields only: a later account read may reorder the
+// main list, but it never moves a card from one region to the other.
+//
+// "Usable now" needs two things, and neither of them is capability readiness:
+// magpie has the provider enabled (its list carried the id, so the merge says
+// `both` or `magpie-only`) and the installed-plugin scan exposed a runnable
+// sign-in method. A provider magpie does not know about cannot receive the
+// account the plugin writes, so a signable card for one waits in the collapsed
+// region until magpie has it.
+export function providerIsPrimary(provider = {}) {
+  const presence = provider?.presence;
+  const knownToMagpie = presence === "both" || presence === "magpie-only";
+  return knownToMagpie && providerCanSignIn(provider);
+}
+
+// The collapsed region is the page's completeness promise: every subscription
+// service the local data knows about appears there, including the magpie-native
+// ones this plugin has no sign-in flow for. A local model runner is a chat
+// endpoint on this computer, not a subscription to sign in to, and magpie's
+// `providers:list` carries names only (no kind), so the handful of
+// non-subscription ids are named here instead of guessed from a name.
+export const NON_SUBSCRIPTION_PROVIDER_IDS = Object.freeze(["llama-local"]);
+
+export function providerIsSubscription(provider = {}) {
+  const id = String(provider?.id || "").trim().toLowerCase();
+  if (!id) return false;
+  return !NON_SUBSCRIPTION_PROVIDER_IDS.includes(id);
+}
+
+function accountCountOf(accountCounts, id) {
+  if (!accountCounts) return 0;
+  const raw = typeof accountCounts.get === "function" ? accountCounts.get(id) : accountCounts[id];
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+// Pure split, so the rule is testable without a DOM. `accountCounts` only
+// orders the main list (the exits with the most accounts first); it never
+// decides which region a card lands in. When magpie's list could not be read
+// nothing can be called "usable now", and hiding every card behind a closed
+// fold would be worse than the old single grid, so the split then degrades to
+// "everything in the main list".
+export function partitionProviders(items = [], accountCounts = {}) {
+  const cards = (Array.isArray(items) ? items : []).filter((item) => item && item.id);
+  const magpieKnown = cards.some(
+    (item) => item.presence === "both" || item.presence === "magpie-only",
+  );
+  const primary = [];
+  const other = [];
+  for (const provider of cards) {
+    if (!providerIsSubscription(provider)) continue;
+    if (!magpieKnown || providerIsPrimary(provider)) primary.push(provider);
+    else other.push(provider);
+  }
+  primary.sort(
+    (left, right) =>
+      accountCountOf(accountCounts, right.id) - accountCountOf(accountCounts, left.id) ||
+      String(left.name || left.id).localeCompare(String(right.name || right.id)),
+  );
+  return { primary, other };
+}
+
 // A provider card's add entry comes from the installed-plugin scan, and that
 // scan starts on the first /api/provider-sources read. The first answer
 // therefore says `scanning: true` and carries no sign-in methods, so without a
