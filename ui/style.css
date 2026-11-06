@@ -1196,6 +1196,21 @@ main { flex: 1; }
 .account-name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .account-name-line strong { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* The accounts table prints the fingerprint id and the time it was pinned in
+   one cell. `small` is inline by default, so without this rule the pin ran
+   straight into the id ("421c·406be868Pinned Nov 7, …") and the column width
+   decided where the sentence broke. The pin is a second fact, so it gets a
+   second line. It may wrap inside itself: a clipped pin is a wrong pin. */
+.account-fingerprint small {
+  display: block;
+  margin-top: 2px;
+  color: var(--faint);
+  font: 500 10px/1.5 var(--mono);
+  letter-spacing: 0.04em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .account-toolbar {
   display: flex;
   flex-wrap: wrap;

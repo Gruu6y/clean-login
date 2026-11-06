@@ -87,6 +87,17 @@ test("header and rows share one set of grid tracks", () => {
   expect(aligned).toContain("grid-template-columns: subgrid");
 });
 
+// --- 4b. the pinned fingerprint keeps its own line --------------------------
+
+test("the pinned fingerprint time gets its own line in the accounts table", () => {
+  // The cell is `.proxy-address account-fingerprint`; the generic
+  // `.proxy-address` rule never styles its <small>. As an inline element the
+  // pin used to run into the id, and the old ellipsis style clipped it.
+  const block = rule(".account-fingerprint small {");
+  expect(block).toContain("display: block");
+  expect(block).toContain("white-space: normal");
+});
+
 // --- 5. narrow-screen card fallback + section chrome -----------------------
 
 test("the narrow-screen card fallback and section chrome survive", () => {
