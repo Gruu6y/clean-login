@@ -25,6 +25,7 @@ const buttonIds = [
   "account-check-cancel", "account-check-reexit", "account-check-details",
   "account-check-change-exit", "account-check-start", "account-check-again",
   "account-check-retry",
+  "report-close", "report-cancel", "report-copy-body", "report-open",
 ];
 
 test("the accounts tab and panel ship every control", () => {

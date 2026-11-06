@@ -512,8 +512,49 @@ main { flex: 1; }
   justify-content: flex-end;
   margin-top: 2px;
 }
+.provider-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
 .provider-add {
-  width: 100%;
+  flex: 1 1 auto;
+}
+/* Reporting stays a quiet secondary control: easy to find on every card,
+   never louder than the action the card exists for. */
+.provider-report {
+  flex: 0 0 auto;
+}
+.report-card-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.report-draft {
+  margin: 0;
+  padding: 12px;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+.report-status {
+  margin: 0;
+  color: var(--ok);
+  font-size: 13px;
+}
+.report-dialog textarea {
+  resize: vertical;
 }
 .signin-provider {
   margin: 0 0 4px;

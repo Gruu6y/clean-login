@@ -505,6 +505,10 @@ test("static files exist and carry no mock data or dead action buttons", () => {
     "account-check-start",
     "account-check-again",
     "account-check-retry",
+    "report-close",
+    "report-cancel",
+    "report-copy-body",
+    "report-open",
   ];
   expect((html.match(/<button\b/g) || []).length).toBe(buttonIds.length);
   for (const id of buttonIds) expect(html).toContain(`id="${id}"`);
