@@ -45,6 +45,32 @@ The first time you sign in, Clean Login downloads its own browser runtime — ab
 4. If the provider's sign-in opens a browser, a separate browser window appears: sign in there as usual; it finishes by itself and the account appears in magpie. Close the window to cancel instead.
 5. If the provider asks for a value first (a phone number, for instance), fill it in the dialog and press **Start sign-in**. When the plugin sends a one-time code, type it in the same dialog and press **Submit code**.
 
+## Command line and agents
+
+The page is built for a person with a mouse. A script or an agent can drive the same service without the UI, using the bundled CLI:
+
+```sh
+bun bin/clean-login.mjs agent       # compact digest of the whole service, as JSON
+bun bin/clean-login.mjs providers   # just the provider cards
+bun bin/clean-login.mjs proxies     # just the exits, without credentials
+bun bin/clean-login.mjs accounts    # just the accounts
+```
+
+The CLI finds the service at `127.0.0.1:3492` (override with `--port` or `--url`), reads the per-process page token from the page it serves, and never prints that token. It has no dependencies beyond the runtime's `fetch`, so it starts in milliseconds and does not load the browser modules.
+
+Two things keep a program from having to poll:
+
+- **`GET /api/agent`** returns one compact, self-describing digest: the version, the service port, the command catalog, and the merged provider cards, proxies, accounts and running job states. It does not carry the four-language descriptions, notices or capability reasons the page needs, and never carries a password.
+- **`?wait=<ms>`** on the async status routes (`/api/signin`, `/api/native-signin`, `/api/proxy-score`, `/api/environment/job`, `/api/accounts/:provider/:key/check`) blocks inside the service until the job settles or the bound elapses. One request replaces the browser's poll loop. A state that needs the caller to act — a one-time code, a pasted value — ends the wait immediately instead of holding the connection open.
+
+```sh
+bun bin/clean-login.mjs signin start --provider workbuddy --proxy hk-home-1 --wait
+bun bin/clean-login.mjs signin code 123456
+bun bin/clean-login.mjs proxy score hk-home-1 --wait
+```
+
+Run `bun bin/clean-login.mjs help` for the full command list. A remote service (`magpie web`) has no loopback page to read, so pass `--token` there explicitly; the token is the one embedded in the page the service serves.
+
 ## Good to know
 
 - **Each account is its own browser.** Profiles, fingerprints and cookies belong to one account and are never shared, so signing in twice never merges two identities.
