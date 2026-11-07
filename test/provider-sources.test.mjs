@@ -57,7 +57,7 @@ test("every local provider id lines up with magpie's own ids", () => {
   // sign-in this plugin should not run yet from looking like a normal one.
   expect(byId.codex.notice["zh-Hans"]).toContain("沙箱服务");
   expect(byId.claude.notice["zh-Hans"]).toContain("沙箱服务");
-  expect(byId.antigravity.notice).toEqual({});
+  expect(byId.antigravity.notice["zh-Hans"]).toContain("神仙来了也得封");
 });
 
 test("normalization accepts a bare string array", () => {
