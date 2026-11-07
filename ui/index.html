@@ -10,6 +10,12 @@
   <script src="app.js" type="module"></script>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute;visibility:hidden" aria-hidden="true">
+    <defs>
+      <path id="brand-mark-cl" fill="currentColor" d="M61.9 74.6L62.5 75.1L61.9 77.5Q58.1 80 54.1 81.6Q50.1 83.3 45.3 83.3Q40.1 83.3 36.4 81.3Q32.7 79.4 30.9 75.9Q29.1 72.4 29.1 67.4Q29.1 61.1 31.5 55.4Q33.9 49.7 40.4 44.8Q46.9 40 54.9 40Q56.8 40 58.8 40.2Q60.9 40.5 62.9 41.1Q64.9 41.7 66.3 42.6L66.4 43Q64.6 48.5 64.2 52.6L64 52.8L62.4 52.8L62.1 52.6Q62.2 48 62.2 47.7Q62.2 46.9 61.9 46.5Q61.6 46 60.2 45.2Q58.8 44.4 56.7 43.9Q54.6 43.4 52.3 43.4Q49.5 43.4 47.1 44.2Q44.7 44.9 42.6 46.9Q40.6 49 39.4 52.2Q38.2 55.4 37.7 59Q37.3 62.5 37.3 65.8Q37.3 71.1 38.7 73.9Q40.2 76.7 42.8 78Q45.4 79.2 48.7 79.2Q50.4 79.2 52.2 78.9Q54 78.5 55.7 77.9Q57.3 77.3 61.9 74.6M68.7 82.2L68.5 82L68.7 80.4L69 80.2Q71.2 79.6 71.7 79.4Q71.9 79.2 72.1 79.1Q72.2 78.9 72.3 78.6Q72.8 77.5 73.5 73L77.2 51.2Q78.1 45.8 78.1 44.5Q78.1 43.7 77.7 43.4Q77.3 43.1 76.8 43Q76.3 42.9 72.7 42.7L72.6 42.5L72.8 40.9L73.1 40.6Q77.2 40.8 82.3 40.8Q83.7 40.8 91.8 40.6L91.9 40.9L91.7 42.5L91.5 42.7Q88.2 42.8 87.7 42.9Q87.2 43.1 86.8 43.4Q86.4 43.8 86.1 45.2Q85.7 46.6 84.7 52.1L81 73.1Q80.2 77.1 80.1 79.1L84.9 79.1Q88.6 79.1 91.4 79Q94.1 78.8 95.1 78.5Q96.1 78.2 96.6 77.6Q97 77 97.7 74.5Q97.9 73.8 98.5 72L98.7 71.7L100.4 71.7L100.7 72Q100.6 72.7 100.1 74.9Q99.7 76.6 99.4 78.6Q98.9 81 98.7 81.9L98.4 82.2Q93.4 82.1 91.2 82.1L79.4 82Q72.6 82 68.7 82.2"></path>
+      <rect id="brand-mark-rule" fill="currentColor" x="36" y="98" width="56" height="5"></rect>
+    </defs>
+  </svg>
   <!-- Editorial chrome: the left spine, the reading-progress line under the
        top edge, and the right section rail. All three are decorative: the rail
        only mirrors the selected tab (it duplicates the real tablist), so its
@@ -33,7 +39,7 @@
   </nav>
   <div class="shell">
     <header class="header">
-      <img class="brand-icon" src="assets/icon.svg" alt="">
+      <svg class="brand-icon" viewBox="0 0 128 128" role="img" aria-label="Clean Login"><use class="brand-mark-cl" href="#brand-mark-cl"></use><use class="brand-mark-rule" href="#brand-mark-rule"></use></svg>
       <div class="brand-copy">
         <h1 id="page-title">Clean Login</h1>
         <p id="page-subtitle">Proxy IPs and provider sign-ins.</p>
@@ -107,7 +113,7 @@
           </div>
         </div>
         <div class="empty" id="providers-empty">
-          <img src="assets/icon.svg" alt="">
+          <svg class="empty-mark" viewBox="0 0 128 128" aria-hidden="true"><use class="brand-mark-cl" href="#brand-mark-cl"></use><use class="brand-mark-rule" href="#brand-mark-rule"></use></svg>
           <strong id="providers-empty-title">No providers yet</strong>
           <p id="providers-empty-copy">Supported providers appear here when the local service is ready.</p>
         </div>
@@ -140,7 +146,7 @@
           </div>
         </div>
         <div class="empty" id="proxies-empty">
-          <img src="assets/icon.svg" alt="">
+          <svg class="empty-mark" viewBox="0 0 128 128" aria-hidden="true"><use class="brand-mark-cl" href="#brand-mark-cl"></use><use class="brand-mark-rule" href="#brand-mark-rule"></use></svg>
           <strong id="proxies-empty-title">No proxy IPs yet</strong>
           <p id="proxies-empty-copy">Add a proxy to give providers a clean exit.</p>
           <button class="button primary" id="add-proxy-empty" type="button">Add Proxy</button>
@@ -250,7 +256,7 @@
           <div class="tbl-body" id="accounts-list"></div>
         </div>
         <div class="empty" id="accounts-empty" hidden>
-          <img src="assets/icon.svg" alt="">
+          <svg class="empty-mark" viewBox="0 0 128 128" aria-hidden="true"><use class="brand-mark-cl" href="#brand-mark-cl"></use><use class="brand-mark-rule" href="#brand-mark-rule"></use></svg>
           <strong id="accounts-empty-title">No accounts yet</strong>
           <p id="accounts-empty-copy">Accounts appear here after a sign-in through Clean Login.</p>
         </div>

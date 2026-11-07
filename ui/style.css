@@ -186,12 +186,16 @@ code, .mono { font-family: var(--mono); }
 }
 
 .brand-icon {
+  display: block;
+  color: var(--ink);
   width: 44px;
   height: 44px;
   flex: none;
   border: 1.5px solid var(--ink);
   background: var(--paper-3);
 }
+.brand-mark-cl { color: inherit; }
+.brand-mark-rule { color: var(--red); }
 .brand-copy { min-width: 0; }
 .brand-copy h1 {
   margin: 0;
@@ -368,7 +372,8 @@ main { flex: 1; }
   border-radius: var(--radius);
   background: transparent;
 }
-.empty img {
+.empty img,
+.empty-mark {
   width: 40px;
   height: 40px;
   margin-bottom: 6px;
