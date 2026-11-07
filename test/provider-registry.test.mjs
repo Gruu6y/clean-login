@@ -77,6 +77,32 @@ test("the registry writes no verification reason and no card claims readiness", 
   }
 });
 
+// Every language has to name the missing service: a card that only said "not
+// recommended" would leave the reader guessing what is missing.
+const SANDBOX_LINE = {
+  en: /sandbox service/i,
+  "zh-Hans": /沙箱服务/,
+  "zh-Hant": /沙箱服務/,
+  ja: /サンドボックスサービス/,
+};
+
+test("codex and claude say the sandbox service is not ready, and only those two", () => {
+  const byId = Object.fromEntries(PROVIDERS.map((provider) => [provider.id, provider]));
+  for (const id of ["codex", "claude"]) {
+    expect(byId[id].notice).toBeTruthy();
+    for (const lang of LANGS) {
+      expect(byId[id].notice[lang]).toMatch(SANDBOX_LINE[lang]);
+    }
+    // The warning belongs to the notice, not to the description: a description
+    // says what the provider is, a notice says what to do about it.
+    expect(JSON.stringify(byId[id].description)).not.toMatch(SANDBOX_LINE.en);
+  }
+  // The Claude card keeps the one fact about how magpie signs in at all.
+  expect(byId.claude.notice.en).toMatch(/claude-token/);
+  // antigravity is the same kind of built-in and is deliberately left alone.
+  expect(byId.antigravity.notice).toEqual({});
+});
+
 test("the registry contains no secret fields or credential values", () => {
   for (const provider of PROVIDERS) {
     expect(Object.keys(provider).sort()).toEqual([...PROVIDER_PUBLIC_FIELDS].sort());

@@ -53,6 +53,11 @@ test("every local provider id lines up with magpie's own ids", () => {
   // importing a token through POST /api/signin/claude-token), so it stays
   // local-only and the card says so.
   expect(byId.claude.presence).toBe("local-only");
+  // The registry's notice has to survive the merge: it is the line that keeps a
+  // sign-in this plugin should not run yet from looking like a normal one.
+  expect(byId.codex.notice["zh-Hans"]).toContain("沙箱服务");
+  expect(byId.claude.notice["zh-Hans"]).toContain("沙箱服务");
+  expect(byId.antigravity.notice).toEqual({});
 });
 
 test("normalization accepts a bare string array", () => {
