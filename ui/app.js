@@ -100,6 +100,7 @@ const messages = {
     providerSourceLocal: "local registry",
     providerSourceMagpie: "magpie list",
     providerSourcePlugins: "installed plugin",
+    providerSourceMarket: "magpie market",
     providerPluginsFound: "{count} installed provider entries · {browser} need a browser",
     providerPluginsScanning: "Scanning installed plugins…",
     providerPluginsUnavailable: "Installed plugin scan unavailable",
@@ -468,6 +469,7 @@ const messages = {
     providerSourceLocal: "本地注册表",
     providerSourceMagpie: "magpie 名单",
     providerSourcePlugins: "已安装插件",
+    providerSourceMarket: "magpie 市场",
     providerPluginsFound: "已安装供应商条目 {count} 个 · {browser} 个需要浏览器",
     providerPluginsScanning: "正在扫描已安装插件…",
     providerPluginsUnavailable: "无法扫描已安装插件",
@@ -836,6 +838,7 @@ const messages = {
     providerSourceLocal: "本機登錄檔",
     providerSourceMagpie: "magpie 名單",
     providerSourcePlugins: "已安裝外掛",
+    providerSourceMarket: "magpie 市場",
     providerPluginsFound: "已安裝供應商項目 {count} 個 · {browser} 個需要瀏覽器",
     providerPluginsScanning: "正在掃描已安裝外掛…",
     providerPluginsUnavailable: "無法掃描已安裝外掛",
@@ -1204,6 +1207,7 @@ const messages = {
     providerSourceLocal: "ローカル登録",
     providerSourceMagpie: "magpie の一覧",
     providerSourcePlugins: "インストール済みプラグイン",
+    providerSourceMarket: "magpie のマーケット",
     providerPluginsFound: "インストール済みプロバイダー {count} 件 · ブラウザーが必要 {browser} 件",
     providerPluginsScanning: "インストール済みプラグインをスキャン中…",
     providerPluginsUnavailable: "インストール済みプラグインをスキャンできません",
@@ -2580,7 +2584,10 @@ function providerCard(provider) {
   const sourceNames = [];
   if (provider.sources?.local) sourceNames.push(text.providerSourceLocal);
   if (provider.sources?.magpie) sourceNames.push(text.providerSourceMagpie);
-  if (provider.pluginPackage) sourceNames.push(text.providerSourcePlugins);
+  if (provider.pluginPackage && provider.sources?.market !== true) {
+    sourceNames.push(text.providerSourcePlugins);
+  }
+  if (provider.sources?.market) sourceNames.push(text.providerSourceMarket);
   if (sourceNames.length) {
     const sourceNode = document.createElement("p");
     sourceNode.className = "provider-source-line";

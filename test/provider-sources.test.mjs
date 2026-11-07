@@ -273,7 +273,7 @@ test("catalogue providers magpie offers but nothing can sign into become catalog
   expect(ids(merged.providers).filter((id) => id === "workbuddy-ai")).toHaveLength(1);
 });
 
-test("a catalog card offers no sign-in entry and says why", () => {
+test("a catalog card offers no sign-in entry and prints no paragraph about it", () => {
   const merged = mergeProviderSources({
     local: [],
     magpie: { ok: true, value: [] },
@@ -287,7 +287,13 @@ test("a catalog card offers no sign-in entry and says why", () => {
   expect(card.browserMethod).toBe(false);
   expect(card.linkOnly).toBe(true);
   expect(card.pluginPackage).toBe("pkg");
-  expect(card.description["zh-Hans"]).toContain("没有安装");
+  // The 未安装 tag and the market source line carry the whole story. A
+  // paragraph repeating "the plugin is not installed" was three lines of noise
+  // on a card whose only action is 报告问题.
+  expect(card.description).toEqual({});
+  expect(card.notice).toBeNull();
+  expect(card.capability.reason).toEqual({});
+  expect(card.sources).toEqual({ local: false, magpie: false, market: true });
 });
 
 test("an unavailable catalog adds nothing rather than an empty claim", () => {
