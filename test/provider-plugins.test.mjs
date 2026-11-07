@@ -153,13 +153,17 @@ test("the presences are worded apart in all four languages", () => {
   expect(map["mystery-ai"].nativeSignIn).toBe(true);
   expect(providerCanSignIn(map["mystery-ai"])).toBe(true);
 
-  // The local registry writes no verification reason at all. A card whose
-  // plugin layer found nothing is left with only its description: a sentence
-  // saying "not verified yet" would be a claim the plugin can never retract.
+  // The local registry writes no verification reason at all. Claude is a
+  // registry-only card, so it sits in the other-providers list and keeps only
+  // its curated reminder: the description it used to carry repeated the same
+  // token-import fact the reminder already states.
   const claude = map.claude;
   expect(claude.browserMethod).toBe(false);
   expect(claude.capability.reason).toEqual({});
-  expect(claude.description.en).toContain("Claude");
+  expect(claude.presence).toBe("local-only");
+  expect(claude.description).toEqual({});
+  expect(claude.presenceNote).toBeNull();
+  expect(claude.notice.en).toContain("sandbox service is not ready");
 });
 
 test("an unavailable plugin scan degrades to the first layer with no false claims", () => {

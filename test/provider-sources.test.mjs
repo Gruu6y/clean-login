@@ -180,10 +180,16 @@ test("case c: a local provider magpie omits is annotated, not removed", () => {
   const card = view.providers.find((provider) => provider.id === "claude");
   expect(card.presence).toBe("local-only");
   expect(card.sources).toEqual({ local: true, magpie: false });
-  expect(card.presenceNote.en).toContain("does not list this provider");
-  for (const lang of ["zh-Hans", "zh-Hant", "ja"]) {
-    expect(card.presenceNote[lang]).toBeTruthy();
+  // One line, and it is the registry's own reminder: the card sits in the
+  // other-providers list, where the tag and the source line already say where
+  // it came from, so the description and the "magpie does not list it" note
+  // were two more paragraphs around one sentence.
+  expect(card.description).toEqual({});
+  expect(card.presenceNote).toBeNull();
+  for (const lang of ["en", "zh-Hans", "zh-Hant", "ja"]) {
+    expect(card.notice[lang]).toBeTruthy();
   }
+  expect(card.notice["zh-Hans"]).toContain("暂时不建议使用本插件登录");
   expect(view.counts).toEqual({ total: 3, both: 1, localOnly: 2, magpieOnly: 0, pluginOnly: 0, catalogOnly: 0 });
 });
 
