@@ -296,9 +296,11 @@ test("a plugin-only provider gets a fifth-presence card with its derived methods
   for (const lang of LANGS) {
     expect(kiro.description[lang]).toBeTruthy();
     expect(kiro.notice[lang]).toBeTruthy();
-    expect(kiro.presenceNote[lang]).toBeTruthy();
     expect(kiro.capability.reason[lang]).toBeTruthy();
   }
+  // The notice is the one line that says what the magpie list read means for
+  // this card. A second presence note with the same copy printed it twice.
+  expect(kiro.presenceNote).toBeNull();
   // The scan cannot tell what this flow does, but it IS a runnable method, so
   // the card offers the add entry: the page shown at sign-in is the truth.
   expect(providerCanSignIn(kiro)).toBe(true);
