@@ -58,7 +58,9 @@
         "option": "port"
       }
     },
-    "permissions": ["providers:list"],
+    "permissions": [
+      "providers:list"
+    ],
     "options": {
       "port": 3492
     }
