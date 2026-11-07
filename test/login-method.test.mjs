@@ -523,16 +523,16 @@ test("ZCode's three oauth methods are no longer reported as unknown", () => {
   const zcode = view.providers.find((provider) => provider.id === "zcode");
   const methods = zcode.authMethods;
   // None of the three browser flows is called "unknown" in the sense of
-  // "nothing was found": the card says the kind is confirmed at sign-in time.
+  // "nothing was found": the methods carry their kinds, and the card's
+  // signability reflects that. A magpie-only card prints no paragraph.
   expect(methods[0].category).toBe("pending");
   expect(zcode.unconfirmedMethod).toBe(true);
   expect(zcode.primaryCategory).toBe("pending");
   expect(zcode.signableMethod).toBe(true);
-  expect(zcode.capability.reason.en).toContain("only known when the sign-in actually starts");
-  expect(zcode.capability.reason.en).not.toContain("exposes a browser sign-in method");
-  for (const lang of ["en", "zh-Hans", "zh-Hant", "ja"]) {
-    expect(zcode.capability.reason[lang]).toBeTruthy();
-  }
+  expect(zcode.capability.reason).toEqual({});
+  expect(zcode.description).toEqual({});
+  expect(zcode.notice).toBeNull();
+  expect(zcode.presenceNote).toBeNull();
   // The local session and the API key keep their own kinds.
   expect(methodCategory(methods[3])).toBe("local");
   expect(methodCategory(methods[4])).toBe("key");
@@ -608,12 +608,16 @@ test("a form method and a pasted-key method are not called unknown", () => {
   });
   const kiro = view.providers.find((provider) => provider.id === "kiro");
   const qoder = view.providers.find((provider) => provider.id === "qoder");
+  // The methods carry their categories and the card sets its category flags.
+  // The card itself is magpie-only, so it carries no paragraph of its own.
   expect(kiro.primaryCategory).toBe("form");
   expect(kiro.formMethod).toBe(true);
-  expect(kiro.capability.reason.en).toContain("needs details typed in");
+  expect(kiro.capability.reason).toEqual({});
+  expect(kiro.description).toEqual({});
   expect(qoder.primaryCategory).toBe("secret");
   expect(qoder.secretMethod).toBe(true);
-  expect(qoder.capability.reason.en).toContain("asks for a secret you paste in");
+  expect(qoder.capability.reason).toEqual({});
+  expect(qoder.description).toEqual({});
 });
 
 // ---------- change 4: the method choice ----------

@@ -121,27 +121,37 @@ test("a recognized browser method creates the sign-in gate regardless of readine
   expect(JSON.stringify(view)).not.toMatch(/Add Account/);
 });
 
-test("the two states are worded apart in all four languages", () => {
+test("the presences are worded apart in all four languages", () => {
   const view = mergeProviderSources({ local: LOCAL, magpie: ["codex", "cursor", "mystery-ai"], plugins: PLUGINS });
   const map = byId(view);
 
-  // (a) a browser method was found. The card says what was found and invites a
+  // (a) A card whose plugin layer found a browser method says so and invites a
   // try; it never claims the flow is unverified, because the plugin can never
   // learn the outcome of an attempt.
-  for (const provider of [map.codex, map.cursor]) {
-    expect(provider.browserMethod).toBe(true);
-    expect(provider.capability.state).toBe("pending");
-    expect(provider.capability.reason.en).toContain("browser sign-in method");
-    expect(provider.capability.reason.en).toContain("try it directly");
-    expect(provider.capability.reason.en).not.toMatch(/not verified|unverified/i);
-    for (const lang of LANGS) expect(provider.capability.reason[lang]).toBeTruthy();
-  }
+  const found = map.codex;
+  expect(found.browserMethod).toBe(true);
+  expect(found.capability.state).toBe("pending");
+  expect(found.capability.reason.en).toContain("browser sign-in method");
+  expect(found.capability.reason.en).toContain("try it directly");
+  expect(found.capability.reason.en).not.toMatch(/not verified|unverified/i);
+  for (const lang of LANGS) expect(found.capability.reason[lang]).toBeTruthy();
 
-  // (b) the plugins were scanned and none of this provider's methods is a
-  // browser flow.
+  // (b) A magpie-only card prints no paragraph, whichever way the scan went. It
+  // always carries a door of its own, so a sentence about what it lacks would
+  // be a claim the card itself contradicts. The projection still carries the
+  // methods and the browser flag.
+  for (const provider of [map.cursor, map["mystery-ai"]]) {
+    expect(provider.presence).toBe("magpie-only");
+    expect(provider.description).toEqual({});
+    expect(provider.capability.reason).toEqual({});
+    expect(provider.notice).toBeNull();
+    expect(provider.presenceNote).toBeNull();
+  }
+  expect(map.cursor.browserMethod).toBe(true);
+  expect(providerCanSignIn(map.cursor)).toBe(true);
   expect(map["mystery-ai"].browserMethod).toBe(false);
-  expect(map["mystery-ai"].capability.reason.en).toContain("No browser sign-in method was found");
-  for (const lang of LANGS) expect(map["mystery-ai"].capability.reason[lang]).toBeTruthy();
+  expect(map["mystery-ai"].nativeSignIn).toBe(true);
+  expect(providerCanSignIn(map["mystery-ai"])).toBe(true);
 
   // The local registry writes no verification reason at all. A card whose
   // plugin layer found nothing is left with only its description: a sentence
@@ -163,10 +173,13 @@ test("an unavailable plugin scan degrades to the first layer with no false claim
       expect(provider.authMethods).toEqual([]);
       expect(provider.pluginPackage).toBeNull();
     }
-    // A magpie-only card names the absence of a browser method, which is a fact
-    // about the installed plugins, not a claim about verification.
-    expect(map["mystery-ai"].capability.reason.en).toContain("has no browser sign-in method");
-    expect(map["mystery-ai"].capability.reason.en).not.toMatch(/not verified|unverified/i);
+    // A scan that never ran has nothing to say about the installed plugins, so
+    // the magpie-only card says nothing rather than claiming an absence. It
+    // still has magpie's own door.
+    expect(map["mystery-ai"].capability.reason).toEqual({});
+    expect(map["mystery-ai"].description).toEqual({});
+    expect(map["mystery-ai"].notice).toBeNull();
+    expect(map["mystery-ai"].nativeSignIn).toBe(true);
     expect(view.counts).toEqual({ total: 4, both: 1, localOnly: 2, magpieOnly: 1, pluginOnly: 0, catalogOnly: 0 });
   }
 });
@@ -189,9 +202,11 @@ test("a failed plugin scan is worded as a failure, not as an unverified flow", (
       expect(provider.capability.reason[lang]).toContain("dirent is not defined");
     }
   }
-  // The old presence note repeated the same "not verified" claim; it now names
-  // the failure too.
-  expect(map["mystery-ai"].presenceNote.en).toContain("The installed-plugin scan failed");
+  // That one diagnostic is the only line this magpie-only card prints: no
+  // second copy of it, and no static sentence beside it.
+  expect(map["mystery-ai"].presenceNote).toBeNull();
+  expect(map["mystery-ai"].notice).toBeNull();
+  expect(map["mystery-ai"].description).toEqual({});
   // The reason stays bounded even when the child reports a huge error.
   const huge = byId(mergeProviderSources({
     local: LOCAL,
@@ -205,7 +220,8 @@ test("a failed plugin scan is worded as a failure, not as an unverified flow", (
     magpie: ["mystery-ai"],
     plugins: { available: false, providers: [] },
   }));
-  expect(never["mystery-ai"].capability.reason.en).toContain("has no browser sign-in method");
+  expect(never["mystery-ai"].capability.reason).toEqual({});
+  expect(never["mystery-ai"].nativeSignIn).toBe(true);
 });
 
 // A method that asks something before it starts carries the questions on the
@@ -334,7 +350,7 @@ test("a plugin-only provider with a browser method names the method, not a verif
 // Plan) on a magpie-only card must not claim a browser method was identified,
 // and must not be called "unknown" in the sense of "nothing was found": the
 // flow's real kind is only knowable when authorize() runs.
-test("an ambiguous oauth method on a magpie-only card is worded as to be confirmed, not browser", () => {
+test("an ambiguous oauth method on a magpie-only card is offered as signable, never as a browser method", () => {
   const plugins = {
     available: true,
     providers: [
@@ -349,9 +365,15 @@ test("an ambiguous oauth method on a magpie-only card is worded as to be confirm
   expect(zcode.browserMethod).toBe(false);
   expect(zcode.unconfirmedMethod).toBe(true);
   expect(zcode.signableMethod).toBe(true);
-  expect(zcode.capability.reason.en).toContain("only known when the sign-in actually starts");
-  expect(zcode.capability.reason.en).not.toContain("exposes a browser sign-in method");
-  for (const lang of LANGS) expect(zcode.capability.reason[lang]).toBeTruthy();
+  // The card prints no paragraph at all, so the honesty lives in the projected
+  // flags: the kind is marked as decided at sign-in time, and the card never
+  // claims a browser method was identified. The wording for this case is still
+  // exercised on a plugin-only card below.
+  expect(zcode.capability.reason).toEqual({});
+  expect(zcode.description).toEqual({});
+  expect(zcode.presenceNote).toBeNull();
+  expect(zcode.notice).toBeNull();
+  expect(providerCanSignIn(zcode)).toBe(true);
 });
 
 test("the third-source merge stays public and leak-free", () => {
