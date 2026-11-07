@@ -5,7 +5,13 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { orderSignInProxies, usedSignInProxies } from "../ui/signin-state.js";
+import {
+  SIGN_IN_PROXY_TEST_CONCURRENCY,
+  formatSignInProxyOption,
+  orderSignInProxies,
+  probeSignInProxies,
+  usedSignInProxies,
+} from "../ui/signin-state.js";
 
 const root = join(import.meta.dir, "..");
 const app = readFileSync(join(root, "ui", "app.js"), "utf8");
@@ -86,4 +92,100 @@ test("the dialog uses the provider history and rerenders without losing the sele
   expect(app).toContain("orderSignInProxies(proxies, accountIdentities, signInContext?.provider)");
   expect(app).toContain("renderSignInAccounts(signInContext.provider);\n    renderSignInProxies();");
   expect(app).toContain("select.value = ordered.some((proxy) => proxy.id === previous) ? previous : \"\";");
+});
+
+test("sign-in proxy option text shows live testing state, measured latency or failure", () => {
+  const labels = {
+    statusTesting: "正在测试…",
+    statusOk: "可用",
+    statusError: "失败",
+    statusUntested: "未检测",
+  };
+  const base = { id: "r3-1", name: "R3-1|香港-NF|BGP静态", host: "127.0.0.1", port: 18106 };
+
+  expect(formatSignInProxyOption(base, labels, false)).toBe(
+    "R3-1|香港-NF|BGP静态 · 127.0.0.1:18106",
+  );
+  expect(formatSignInProxyOption(base, labels, true)).toBe(
+    "R3-1|香港-NF|BGP静态 · 127.0.0.1:18106 · 正在测试…",
+  );
+  expect(
+    formatSignInProxyOption({ ...base, status: "ok", latency: 42 }, labels, false),
+  ).toBe("R3-1|香港-NF|BGP静态 · 127.0.0.1:18106 · 42 ms");
+  expect(
+    formatSignInProxyOption({ ...base, status: "ok", latency: 0 }, labels, false),
+  ).toBe("R3-1|香港-NF|BGP静态 · 127.0.0.1:18106 · 0 ms");
+  expect(
+    formatSignInProxyOption({ ...base, status: "ok", latency: null }, labels, false),
+  ).toBe("R3-1|香港-NF|BGP静态 · 127.0.0.1:18106 · 可用");
+  expect(
+    formatSignInProxyOption({ ...base, status: "error", error: "Timed out" }, labels, false),
+  ).toBe("R3-1|香港-NF|BGP静态 · 127.0.0.1:18106 · 失败");
+});
+
+test("probeSignInProxies tests candidates with bounded concurrency and stops on abort", async () => {
+  const list = Array.from({ length: 10 }, (_, index) =>
+    proxy(`p-${index + 1}`, `Node-${index + 1}`),
+  );
+  let active = 0;
+  let maxActive = 0;
+  const started = [];
+  const results = [];
+
+  await probeSignInProxies(
+    list,
+    async (item) => {
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      if (item.id === "p-3") throw new Error("boom");
+      return { ok: true, latency: 20 };
+    },
+    {
+      concurrency: 3,
+      onStart(item) {
+        started.push(item.id);
+      },
+      onResult(item, data, error) {
+        results.push({ id: item.id, ok: Boolean(data?.ok), failed: Boolean(error) });
+      },
+    },
+  );
+
+  expect(SIGN_IN_PROXY_TEST_CONCURRENCY).toBe(4);
+  expect(maxActive).toBeLessThanOrEqual(3);
+  expect(started).toHaveLength(10);
+  expect(results).toHaveLength(10);
+  expect(results.find((item) => item.id === "p-3")).toEqual({
+    id: "p-3",
+    ok: false,
+    failed: true,
+  });
+
+  const controller = new AbortController();
+  const seenAfterAbort = [];
+  await probeSignInProxies(
+    list,
+    async (item) => {
+      if (item.id === "p-2") controller.abort();
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return { ok: true };
+    },
+    {
+      concurrency: 2,
+      signal: controller.signal,
+      onResult(item) {
+        seenAfterAbort.push(item.id);
+      },
+    },
+  );
+  expect(seenAfterAbort.length).toBeLessThan(list.length);
+});
+
+test("the sign-in dialog probes each candidate proxy and cancels probes on cleanup", () => {
+  expect(app).toContain("formatSignInProxyOption(");
+  expect(app).toContain("probeSignInProxies(");
+  expect(app).toContain("api(`api/proxies/${encodeURIComponent(proxy.id)}/test`");
+  expect(app).toContain("cancelSignInProxyTests();");
 });

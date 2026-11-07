@@ -26,7 +26,9 @@ import {
   signInDoor,
 } from "./provider-state.js";
 import {
+  formatSignInProxyOption,
   orderSignInProxies,
+  probeSignInProxies,
   signInActive,
   signInAwaitingCode,
   signInCodePayload,
@@ -2819,6 +2821,18 @@ async function loadAccountIdentities() {
 
 let signInContext = null;
 let signInTimer = null;
+const signInProxyGuard = createRequestGuard();
+let signInProxyController = null;
+const signInTestingProxies = new Set();
+
+function cancelSignInProxyTests() {
+  signInProxyGuard.cancel();
+  if (signInProxyController) {
+    signInProxyController.abort();
+    signInProxyController = null;
+  }
+  signInTestingProxies.clear();
+}
 
 function stopSignInPolling() {
   if (signInTimer) {
@@ -2953,9 +2967,13 @@ function renderSignInProxies() {
   for (const proxy of ordered) {
     const option = document.createElement("option");
     option.value = proxy.id;
-    // Name plus address only; never the password (the API omits it and the page
-    // never sees it).
-    option.textContent = `${proxy.name || proxy.id} · ${formatAddress(proxy)}`;
+    // Name, address and probe latency/status only; never the password (the API
+    // omits it and the page never sees it).
+    option.textContent = formatSignInProxyOption(
+      proxy,
+      text,
+      signInTestingProxies.has(proxy.id) || rowTests.has(proxy.id),
+    );
     select.append(option);
   }
   // Re-sorting after the account histories arrive must not discard a choice.
@@ -2969,10 +2987,18 @@ function selectedSignInProxy() {
 
 // Re-read the stored proxies when the dialog opens so the dropdown reflects
 // GET /api/proxies, not just the list bootstrap cached. A failed read keeps
-// the bootstrap list; the dialog still works.
+// the bootstrap list; the dialog still works. Every candidate exit is then
+// probed with bounded concurrency so the dropdown shows live latency to guide
+// the user's choice.
 async function refreshSignInProxies() {
+  const context = signInContext;
+  cancelSignInProxyTests();
+  const tokenForSweep = signInProxyGuard.begin();
+  const controller = new AbortController();
+  signInProxyController = controller;
   try {
-    const data = await api("api/proxies");
+    const data = await api("api/proxies", { signal: controller.signal });
+    if (!signInProxyGuard.isCurrent(tokenForSweep) || signInContext !== context) return;
     if (Array.isArray(data?.proxies)) {
       const select = byId("signin-proxy");
       const previous = select.value;
@@ -2981,8 +3007,58 @@ async function refreshSignInProxies() {
       // Preserve a choice the user already made while the read was in flight.
       select.value = proxies.some((proxy) => proxy.id === previous) ? previous : "";
     }
-  } catch {
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    if (!signInProxyGuard.isCurrent(tokenForSweep) || signInContext !== context) return;
     // Keep whatever bootstrap already provided.
+  }
+  const ordered = orderSignInProxies(proxies, accountIdentities, context?.provider);
+  for (const proxy of ordered) {
+    if (proxy?.id) signInTestingProxies.add(proxy.id);
+  }
+  renderSignInProxies();
+  await probeSignInProxies(
+    ordered,
+    (proxy, { signal }) =>
+      api(`api/proxies/${encodeURIComponent(proxy.id)}/test`, {
+        method: "POST",
+        signal,
+      }),
+    {
+      signal: controller.signal,
+      onResult(proxy, data) {
+        if (!signInProxyGuard.isCurrent(tokenForSweep) || signInContext !== context) return;
+        signInTestingProxies.delete(proxy.id);
+        if (data?.proxy) {
+          replaceProxy(data.proxy);
+        } else if (data?.result) {
+          const current = proxies.find((item) => item.id === proxy.id);
+          if (current) {
+            current.status = data.result.ok ? "ok" : "error";
+            current.latency = Number.isFinite(data.result.latency)
+              ? Math.round(data.result.latency)
+              : null;
+            current.errorCode = data.result.ok ? "" : data.result.errorCode || "unknown";
+            current.error = data.result.ok ? "" : data.result.error || "";
+          }
+        } else {
+          const current = proxies.find((item) => item.id === proxy.id);
+          if (current) {
+            current.status = "error";
+            current.errorCode = "network";
+            current.error = text.errorNetwork;
+            current.latency = null;
+          }
+        }
+        renderSignInProxies();
+        renderProxies();
+      },
+    },
+  );
+  if (signInProxyGuard.isCurrent(tokenForSweep)) {
+    signInTestingProxies.clear();
+    if (signInProxyController === controller) signInProxyController = null;
+    if (signInContext === context) renderSignInProxies();
   }
 }
 
@@ -3252,6 +3328,8 @@ function signInIsNative(context) {
 async function startSignIn() {
   const context = signInContext;
   if (!context || context.busy) return;
+  cancelSignInProxyTests();
+  renderSignInProxies();
   context.busy = true;
   setSignInError("");
   setSignInNotice("");
@@ -3386,6 +3464,7 @@ async function cancelSignIn() {
 
 function cleanupSignInDialog() {
   stopSignInPolling();
+  cancelSignInProxyTests();
   signInContext = null;
   setSignInNotice("");
   setSignInError("");
@@ -4993,6 +5072,7 @@ byId("confirm-dialog").addEventListener("cancel", (event) => {
 window.addEventListener("pagehide", () => {
   for (const id of [...rowTests.keys()]) cancelRowTest(id);
   cancelDialogTest();
+  cancelSignInProxyTests();
   stopEnvironmentPolling();
   stopSignInPolling();
   stopScorePolling();

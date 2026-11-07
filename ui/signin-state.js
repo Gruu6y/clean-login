@@ -4,6 +4,12 @@
 
 import { signInAccount } from "./account-state.js";
 import { hasKeyword, proxyName } from "./proxy-filter.js";
+import { formatAddress, statusView } from "./proxy-state.js";
+
+// The sign-in dialog probes the candidate exits in the background so the user
+// sees live latency right in the dropdown. A small cap keeps dozens of Clash
+// listeners from all opening sockets at once.
+export const SIGN_IN_PROXY_TEST_CONCURRENCY = 4;
 
 const signInProxyNameCollator = new Intl.Collator("zh-Hans", {
   numeric: true,
@@ -60,6 +66,62 @@ export function orderSignInProxies(proxies = [], accounts = [], provider) {
       return signInProxyNameCollator.compare(aName, bName) || a.index - b.index;
     })
     .map(({ proxy }) => proxy);
+}
+
+// The text of one `<option>` in the sign-in proxy picker. `<option>` only
+// renders plain text, so the probe verdict (or its live testing state) sits at
+// the end of the line where the user can compare exits before picking one.
+export function formatSignInProxyOption(proxy = {}, labels = {}, testing = false) {
+  const name = proxyName(proxy).trim() || String(proxy?.id ?? "");
+  const base = `${name} · ${formatAddress(proxy)}`;
+  const view = statusView(proxy, labels, testing);
+  if (view.state === "testing") return `${base} · ${view.label}`;
+  if (view.state === "ok") {
+    return `${base} · ${view.detail || view.label}`;
+  }
+  if (view.state === "error") return `${base} · ${view.label}`;
+  return base;
+}
+
+// Probes the candidate exits in display order with a small worker pool. The
+// caller's `signal` cancels every still-queued or in-flight probe when the
+// dialog closes or a fresh pass starts, and `onResult` lets the dropdown
+// redraw as each exit finishes instead of waiting for the slowest timeout.
+export async function probeSignInProxies(
+  proxies = [],
+  probe,
+  { concurrency = SIGN_IN_PROXY_TEST_CONCURRENCY, signal, onStart, onResult } = {},
+) {
+  if (typeof probe !== "function") return;
+  const seen = new Set();
+  const queue = [];
+  for (const proxy of Array.isArray(proxies) ? proxies : []) {
+    const id = typeof proxy?.id === "string" ? proxy.id.trim() : "";
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    queue.push(proxy);
+  }
+  if (queue.length === 0 || signal?.aborted) return;
+  const limit = Math.max(1, Math.min(queue.length, Math.trunc(Number(concurrency) || 1)));
+  let cursor = 0;
+  const worker = async () => {
+    while (!signal?.aborted) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= queue.length) return;
+      const proxy = queue[index];
+      onStart?.(proxy);
+      try {
+        const result = await probe(proxy, { signal });
+        if (signal?.aborted) return;
+        onResult?.(proxy, result, null);
+      } catch (error) {
+        if (signal?.aborted || error?.name === "AbortError") return;
+        onResult?.(proxy, null, error);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: limit }, () => worker()));
 }
 
 // The proxy value sent to `POST /api/signin`. It deliberately carries only the
