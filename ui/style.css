@@ -539,7 +539,9 @@ main { flex: 1; }
   line-height: 1.7;
   max-width: 70ch;
 }
-.providers-more .provider-grid { margin: 0 0 16px; }
+/* These cards carry no prose any more, so a stretched row would leave a column
+   of empty card under the buttons. Each card ends where its content ends. */
+.providers-more .provider-grid { margin: 0 0 16px; align-items: start; }
 .providers-more .provider-sources { margin: 0 0 16px; }
 
 .provider-card {

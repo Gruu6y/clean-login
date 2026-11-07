@@ -305,18 +305,14 @@ test("a plugin-only provider gets a fifth-presence card with its derived methods
   ]);  expect(kiro.browserMethod).toBe(false);
   expect(kiro.unconfirmedMethod).toBe(true);
   expect(kiro.capability.state).toBe("pending");
-  // The unknown method is not dressed up as a browser sign-in, but it is not
-  // called "unknown" either: the scan says the kind is decided at sign-in time.
-  expect(kiro.capability.reason.en).toContain("only known when the sign-in actually starts");
-  expect(kiro.capability.reason.en).not.toContain("exposes a browser sign-in method");
-  for (const lang of LANGS) {
-    expect(kiro.description[lang]).toBeTruthy();
-    expect(kiro.notice[lang]).toBeTruthy();
-    expect(kiro.capability.reason[lang]).toBeTruthy();
-  }
-  // The notice is the one line that says what the magpie list read means for
-  // this card. A second presence note with the same copy printed it twice.
+  // The card prints no prose: the 第三方插件 tag says where it came from, the
+  // chips repeat the plugin's own labels, and the source line names the layer.
+  // The pending state survives in the projection even without a sentence.
+  expect(kiro.description).toEqual({});
+  expect(kiro.notice).toBeNull();
   expect(kiro.presenceNote).toBeNull();
+  expect(kiro.capability.reason).toEqual({});
+  for (const lang of LANGS) expect(kiro.description[lang]).toBeUndefined();
   // The scan cannot tell what this flow does, but it IS a runnable method, so
   // the card offers the add entry: the page shown at sign-in is the truth.
   expect(providerCanSignIn(kiro)).toBe(true);
@@ -341,9 +337,11 @@ test("a plugin-only provider with a browser method names the method, not a verif
   expect(loomy.browserMethod).toBe(true);
   expect(loomy.signInProvider).toBe("loomy");
   expect(providerCanSignIn(loomy)).toBe(true);
-  expect(loomy.capability.reason.en).toContain("browser sign-in method");
-  expect(loomy.capability.reason.en).not.toMatch(/not verified|unverified/i);
-  for (const lang of LANGS) expect(loomy.capability.reason[lang]).toBeTruthy();
+  // The method label is the plugin's own, and the card adds nothing around it:
+  // no claim about a verification state, no prose at all.
+  expect(loomy.authMethods.map((method) => method.label)).toEqual(["Sign in with Loomy (browser)"]);
+  expect(loomy.capability.reason).toEqual({});
+  for (const lang of LANGS) expect(loomy.capability.reason[lang]).toBeUndefined();
 });
 
 // Defect 3 regression: an ambiguous oauth provider (here ZCode's GLM Coding

@@ -191,8 +191,10 @@ test("/api/provider-sources keeps installed-plugin cards when magpie's list is m
     // delete every plugin card on the launcher path.
     expect(byId["brand-new"].presence).toBe("plugin-only");
     // What the card may not do is claim the unread list omits the provider.
-    expect(JSON.stringify(byId["brand-new"].notice)).toContain("was not readable");
-    expect(JSON.stringify(byId["brand-new"].notice)).not.toContain("does not include it");
+    // It now says nothing about the list at all, which is the same honesty
+    // with fewer words: there is no sentence to be wrong.
+    expect(byId["brand-new"].notice).toBeNull();
+    expect(byId["brand-new"].description).toEqual({});
   }
 });
 
