@@ -2508,11 +2508,18 @@ function providerCard(provider) {
 
   card.append(head, description);
   if (reason.textContent) card.append(reason);
+  // One card must never print the same sentence twice. Some presences derive
+  // their notice and presence note from one copy object; if a future edit lets
+  // that happen again, drop the duplicate line instead of showing it twice.
+  const shownLines = new Set([description.textContent, reason.textContent].filter(Boolean));
   const presenceNode = document.createElement("p");
   presenceNode.className = "provider-presence";
   presenceNode.textContent = localizedText(provider.presenceNote, langKey);
-  if (presenceNode.textContent) card.append(presenceNode);
-  if (notice.textContent) card.append(notice);
+  if (presenceNode.textContent && !shownLines.has(presenceNode.textContent)) {
+    shownLines.add(presenceNode.textContent);
+    card.append(presenceNode);
+  }
+  if (notice.textContent && !shownLines.has(notice.textContent)) card.append(notice);
 
   // Second layer: the sign-in methods the installed provider plugins expose.
   // The labels are shown honestly, with a per-kind marker. Five kinds are told
