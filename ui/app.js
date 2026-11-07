@@ -2506,7 +2506,11 @@ function providerCard(provider) {
   notice.className = "provider-notice";
   notice.textContent = localizedText(provider.notice, langKey);
 
-  card.append(head, description);
+  // A card appends only the lines it actually carries. Some presences
+  // deliberately have no description or no reason — a `magpie-only` card, for
+  // instance — and an empty paragraph would still take up room in the grid.
+  card.append(head);
+  if (description.textContent) card.append(description);
   if (reason.textContent) card.append(reason);
   // One card must never print the same sentence twice. Some presences derive
   // their notice and presence note from one copy object; if a future edit lets

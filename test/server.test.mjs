@@ -222,8 +222,12 @@ test("/api/provider-sources reports the injected plugin scan and its derived met
     { type: "oauth", label: "brand-new CLI's sign-in", browser: false, category: "local", prompts: [], runnable: true, fields: [] },
     { type: "api", label: "Brand New API key", browser: false, category: "key", prompts: [], runnable: false, fields: [] },
   ]);
-  expect(byId["brand-new"].capability.reason.en).toContain("browser sign-in method");
-  expect(byId["brand-new"].capability.reason.en).not.toMatch(/not verified|unverified/i);
+  // A card for a provider magpie lists prints no paragraph, so its reason is
+  // empty. It is offered through its own installed plugin door.
+  expect(byId["brand-new"].capability.reason).toEqual({});
+  expect(byId["brand-new"].description).toEqual({});
+  expect(byId["brand-new"].notice).toBeNull();
+  expect(byId["brand-new"].presenceNote).toBeNull();
   // The response still carries no button wording and no authorize function.
   expect(res.body).not.toMatch(/Add Account|authorize/i);
 });

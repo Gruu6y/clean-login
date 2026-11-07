@@ -153,21 +153,21 @@ test("case a: a provider in both sources is normal and carries the local sign-in
   }
 });
 
-test("case b: a magpie-only provider has a card, no local fields and an honest reason", () => {
+test("case b: a magpie-only provider has a card, a door and no paragraph", () => {
   const view = mergeProviderSources({ local: LOCAL, magpie: ["codex", "mystery-ai"] });
   const card = view.providers.find((provider) => provider.id === "mystery-ai");
   expect(card).toBeTruthy();
   expect(card.presence).toBe("magpie-only");
   expect(card.sources).toEqual({ local: false, magpie: true });
   expect(card.capability.state).toBe("pending");
-  expect(card.capability.reason.en).toContain("has no browser sign-in method");
-  // Without a plugin scan the presence note repeats the same fact: the reason
-  // and the note are the same sentence in that case.
-  expect(card.presenceNote.en).toContain("has no browser sign-in method");
-  for (const lang of ["zh-Hans", "zh-Hant", "ja"]) {
-    expect(card.capability.reason[lang]).toBeTruthy();
-    expect(card.presenceNote[lang]).toBeTruthy();
-  }
+  // The card always carries a door: with no installed plugin covering it, that
+  // door is magpie's own command line. So it prints no paragraph claiming it
+  // has none — and no note repeating that claim.
+  expect(card.nativeSignIn).toBe(true);
+  expect(card.description).toEqual({});
+  expect(card.capability.reason).toEqual({});
+  expect(card.notice).toBeNull();
+  expect(card.presenceNote).toBeNull();
   // It carries none of the local capabilities, so nothing can be promoted.
   expect(card.agentId).toBe("mystery-ai");
   expect(card.authHosts).toEqual([]);
