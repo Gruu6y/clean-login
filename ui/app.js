@@ -25,7 +25,13 @@ import {
   signInMethodFields,
   signInDoor,
 } from "./provider-state.js";
-import { signInActive, signInAwaitingCode, signInCodePayload, signInPayload } from "./signin-state.js";
+import {
+  orderSignInProxies,
+  signInActive,
+  signInAwaitingCode,
+  signInCodePayload,
+  signInPayload,
+} from "./signin-state.js";
 import {
   accountCheckPath,
   accountIdentityPath,
@@ -2937,12 +2943,14 @@ function renderSignIn() {
 
 function renderSignInProxies() {
   const select = byId("signin-proxy");
+  const previous = select.value;
   select.textContent = "";
   const direct = document.createElement("option");
   direct.value = "";
   direct.textContent = text.signInProxyDirect;
   select.append(direct);
-  for (const proxy of proxies) {
+  const ordered = orderSignInProxies(proxies, accountIdentities, signInContext?.provider);
+  for (const proxy of ordered) {
     const option = document.createElement("option");
     option.value = proxy.id;
     // Name plus address only; never the password (the API omits it and the page
@@ -2950,6 +2958,8 @@ function renderSignInProxies() {
     option.textContent = `${proxy.name || proxy.id} · ${formatAddress(proxy)}`;
     select.append(option);
   }
+  // Re-sorting after the account histories arrive must not discard a choice.
+  select.value = ordered.some((proxy) => proxy.id === previous) ? previous : "";
 }
 
 function selectedSignInProxy() {
@@ -3178,6 +3188,7 @@ function openSignInDialog(provider, options = {}) {
   loadAccountIdentities().then(() => {
     if (!signInContext) return;
     renderSignInAccounts(signInContext.provider);
+    renderSignInProxies();
     renderSignInPreselection();
   });
 }

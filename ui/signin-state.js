@@ -3,6 +3,64 @@
 // decision without a DOM or a running service.
 
 import { signInAccount } from "./account-state.js";
+import { hasKeyword, proxyName } from "./proxy-filter.js";
+
+const signInProxyNameCollator = new Intl.Collator("zh-Hans", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+function rememberLogin(logins, login) {
+  if (!login || typeof login !== "object") return;
+  if (typeof login.proxyId === "string" && login.proxyId.trim()) {
+    logins.ids.add(login.proxyId.trim());
+  }
+  if (typeof login.proxyName === "string" && login.proxyName.trim()) {
+    logins.names.add(login.proxyName.trim().toLowerCase());
+  }
+}
+
+// A proxy counts as used when any identity belonging to this provider has a
+// successful login recorded through it. Match the stored id first, but also
+// remember the node name: rebuilding the proxy list can allocate fresh ids
+// for the same Clash exits. Direct logins have a null id and are not proxies.
+export function usedSignInProxies(accounts = [], provider) {
+  const logins = { ids: new Set(), names: new Set() };
+  for (const account of Array.isArray(accounts) ? accounts : []) {
+    if (!account || account.provider !== provider) continue;
+    for (const login of Array.isArray(account.loginHistory) ? account.loginHistory : []) {
+      rememberLogin(logins, login);
+    }
+    rememberLogin(logins, account.lastLogin);
+  }
+  return logins;
+}
+
+// A first-time sign-in should prefer an exit this provider has not seen:
+// static, then residential, then everything else. Used exits stay available,
+// but move to the end. Names use natural numeric order (R2 before R10).
+export function orderSignInProxies(proxies = [], accounts = [], provider) {
+  const used = usedSignInProxies(accounts, provider);
+  return (Array.isArray(proxies) ? proxies : [])
+    .map((proxy, index) => ({ proxy, index }))
+    .filter(({ proxy }) => proxy && typeof proxy === "object")
+    .sort((a, b) => {
+      const rank = (proxy) => {
+        const id = typeof proxy.id === "string" ? proxy.id.trim() : "";
+        const name = proxyName(proxy).trim().toLowerCase();
+        if (used.ids.has(id) || (name && used.names.has(name))) return 3;
+        if (hasKeyword(proxy, "静态")) return 0;
+        if (hasKeyword(proxy, "家宽")) return 1;
+        return 2;
+      };
+      const difference = rank(a.proxy) - rank(b.proxy);
+      if (difference) return difference;
+      const aName = proxyName(a.proxy).trim() || String(a.proxy.id ?? "");
+      const bName = proxyName(b.proxy).trim() || String(b.proxy.id ?? "");
+      return signInProxyNameCollator.compare(aName, bName) || a.index - b.index;
+    })
+    .map(({ proxy }) => proxy);
+}
 
 // The proxy value sent to `POST /api/signin`. It deliberately carries only the
 // public proxy fields; the stored password never leaves the service. The
