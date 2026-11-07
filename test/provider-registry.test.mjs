@@ -99,8 +99,12 @@ test("codex and claude say the sandbox service is not ready, and only those two"
   }
   // The Claude card keeps the one fact about how magpie signs in at all.
   expect(byId.claude.notice.en).toMatch(/claude-token/);
-  // antigravity is the same kind of built-in and is deliberately left alone.
-  expect(byId.antigravity.notice).toEqual({});
+  // antigravity warns about unpaid accounts getting banned under Google ToS.
+  expect(byId.antigravity.notice).toBeTruthy();
+  for (const lang of LANGS) {
+    expect(byId.antigravity.notice[lang]).toBeTruthy();
+  }
+  expect(byId.antigravity.notice["zh-Hans"]).toContain("神仙来了也得封");
 });
 
 test("the registry contains no secret fields or credential values", () => {
