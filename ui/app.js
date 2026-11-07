@@ -55,6 +55,7 @@ import {
   formatBytes,
 } from "./environment-state.js";
 import { createReloadGuard } from "./reload-guard.js";
+import { followHostTheme } from "./host-theme.js";
 
 const TOKEN_HEADER = "x-clean-login-token";
 
@@ -1568,6 +1569,11 @@ if (theme === "dark" || theme === "light") {
   document.documentElement.dataset.theme =
     window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
 }
+
+// That covers the theme at open time. magpie keeps posting { event: "theme" }
+// to this frame whenever its own switch moves, so follow it for as long as the
+// page is open instead of keeping the colour it was opened with.
+followHostTheme();
 
 const token = document.querySelector('meta[name="clean-login-token"]')?.content || "";
 const byId = (id) => document.getElementById(id);
